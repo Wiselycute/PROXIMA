@@ -1,0 +1,37 @@
+<!--?xml version="1.0" encoding="UTF-8"?-->
+<svg width="1200" height="800" viewBox="0 0 1200 800" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+  <defs>
+    <linearGradient id="g_core" x1="0" x2="1">
+      <stop offset="0%" stop-color="#4BE2F2" stop-opacity="1"></stop>
+      <stop offset="100%" stop-color="#7FF6FF" stop-opacity="0.9"></stop>
+    </linearGradient>
+    <filter id="f-blur" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="18" result="b"></feGaussianBlur>
+      <feBlend in="SourceGraphic" in2="b" mode="screen"></feBlend>
+    </filter>
+    <filter id="f-bloom" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="40" result="g"></feGaussianBlur>
+      <feMerge>
+        <feMergeNode in="g"></feMergeNode>
+        <feMergeNode in="SourceGraphic"></feMergeNode>
+      </feMerge>
+    </filter>
+    <linearGradient id="g_inner" x1="0" x2="1">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.9"></stop>
+      <stop offset="100%" stop-color="#DFFBFF" stop-opacity="0.6"></stop>
+    </linearGradient>
+  </defs>
+
+  <g filter="url(#f-bloom)" opacity="0.9">
+    <path d="M110 620 C220 460, 320 420, 420 350 C520 280, 620 260, 720 220 C820 180, 920 160, 1000 140" stroke="#4BE2F2" stroke-width="40" stroke-linecap="round" stroke-linejoin="round" stroke-opacity="0.18" fill="none"></path>
+  </g>
+
+  <g filter="url(#f-blur)" opacity="0.95">
+    <path d="M110 620 C220 460, 320 420, 420 350 C520 280, 620 260, 720 220 C820 180, 920 160, 1000 140" stroke="url(#g_core)" stroke-width="18" stroke-linecap="round" stroke-linejoin="round" fill="none"></path>
+  </g>
+
+  <path d="M110 620 C220 460, 320 420, 420 350 C520 280, 620 260, 720 220 C820 180, 920 160, 1000 140" stroke="url(#g_inner)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"></path>
+
+  <circle cx="1000" cy="140" r="12" fill="#4BE2F2" opacity="0.95"></circle>
+  <circle cx="420" cy="350" r="9" fill="#4BE2F2" opacity="0.9"></circle>
+</svg>
