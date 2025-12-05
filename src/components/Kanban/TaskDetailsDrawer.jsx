@@ -7,10 +7,16 @@ export default function TaskDetailsDrawer({ open, onClose, task, comments, onAdd
 
   if (!open) return null;
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     if (!newComment.trim()) return;
-    onAddComment(newComment);
-    setNewComment("");
+    try {
+      const api = (await import("@/lib/api")).default;
+      await api.post(`/comments`, { text: newComment, taskId: task._id || task.id });
+      setNewComment("");
+      // Optionally reload comments or notify parent
+    } catch (e) {
+      // Optionally show error toast
+    }
   };
 
   const getPriorityColor = (priority) => {

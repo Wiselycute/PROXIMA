@@ -30,17 +30,24 @@ export default function AddTaskModal({
 
   if (!open) return null;
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!title.trim()) return;
-
-    onCreate({
-      title,
-      description: desc,
-      columnId,
-      assignees: assignee ? [assignee] : [], // convert to array
-      priority,
-      dueDate,
-    });
+    try {
+      const payload = {
+        title,
+        description: desc,
+        columnId,
+        assignees: assignee ? [assignee] : [],
+        priority,
+        dueDate,
+      };
+      // Use Axios to POST to /api/tasks
+      const api = (await import("@/lib/api")).default;
+      await api.post("/tasks", payload);
+      if (onClose) onClose();
+    } catch (e) {
+      // Optionally show error toast
+    }
   };
 
   return (

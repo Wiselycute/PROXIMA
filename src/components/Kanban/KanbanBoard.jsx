@@ -297,7 +297,7 @@ import {
 } from "@dnd-kit/sortable";
 
 import Column from "./Column";
-import { loadBoard, saveBoard, resetBoard, subscribeStorage } from "@/lib/kanbanStorage";
+import api from "@/lib/api";
 
 /**
  * KanbanBoard
@@ -314,22 +314,10 @@ export default function KanbanBoard() {
   const [board, setBoard] = useState(null);
   const [activeId, setActiveId] = useState(null);
 
+  // Load board from API
   useEffect(() => {
-    const existing = loadBoard();
-    if (existing) setBoard(existing);
-    else setBoard(resetBoard());
-    // subscribe storage updates from other tabs
-    const unsub = subscribeStorage((nextBoard) => {
-      if (!nextBoard) return;
-      setBoard(nextBoard);
-    });
-    return () => unsub();
+    api.get("/board").then(res => setBoard(res.data)).catch(() => setBoard(null));
   }, []);
-
-  // save on changes
-  useEffect(() => {
-    if (board) saveBoard(board);
-  }, [board]);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
@@ -400,30 +388,29 @@ export default function KanbanBoard() {
     }));
   }
 
-  function addTask(columnId, title) {
-    const id = `t-${Date.now()}`;
-    const newTask = { id, title, desc: "", assignees: [], due: null, comments: [], attachments: [], priority: "low" };
-    setBoard((prev) => ({
-      ...prev,
-      tasks: { ...prev.tasks, [id]: newTask },
-      columns: { ...prev.columns, [columnId]: { ...prev.columns[columnId], taskIds: [id, ...prev.columns[columnId].taskIds] } }
-    }));
+  async function addTask(columnId, title) {
+    try {
+      const res = await api.post("/tasks", { title, columnId });
+      // Reload board after add
+      const boardRes = await api.get("/board");
+      setBoard(boardRes.data);
+    } catch (e) { /* handle error */ }
   }
 
-  function updateTask(taskId, patch) {
-    setBoard((prev) => ({ ...prev, tasks: { ...prev.tasks, [taskId]: { ...prev.tasks[taskId], ...patch } } }));
+  async function updateTask(taskId, patch) {
+    try {
+      await api.put(`/tasks/${taskId}`, patch);
+      const boardRes = await api.get("/board");
+      setBoard(boardRes.data);
+    } catch (e) { /* handle error */ }
   }
 
-  function deleteTask(taskId) {
-    setBoard((prev) => {
-      const newTasks = { ...prev.tasks };
-      delete newTasks[taskId];
-      const newCols = {};
-      for (const id of prev.columnOrder) {
-        newCols[id] = { ...prev.columns[id], taskIds: prev.columns[id].taskIds.filter((t) => t !== taskId) };
-      }
-      return { ...prev, tasks: newTasks, columns: newCols };
-    });
+  async function deleteTask(taskId) {
+    try {
+      await api.delete(`/tasks/${taskId}`);
+      const boardRes = await api.get("/board");
+      setBoard(boardRes.data);
+    } catch (e) { /* handle error */ }
   }
 
   return (

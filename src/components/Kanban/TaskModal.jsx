@@ -20,7 +20,9 @@ const SAMPLE_MEMBERS = [
   { id: "u-3", name: "Taylor Swift", avatar: "/team/taylor.jpg" }
 ];
 
-export default function TaskModal({ task, onClose, onUpdate, onDelete }) {
+import api from "@/lib/api";
+
+export default function TaskModal({ task, onClose, onUpdate, onDelete, members }) {
   const [title, setTitle] = useState(task.title || "");
   const [desc, setDesc] = useState(task.desc || "");
   const [comments, setComments] = useState(task.comments || []);
@@ -29,7 +31,17 @@ export default function TaskModal({ task, onClose, onUpdate, onDelete }) {
   const [assignees, setAssignees] = useState(task.assignees || []);
   const [due, setDue] = useState(task.due ? new Date(task.due).toISOString().slice(0, 16) : "");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [userList, setUserList] = useState(members || SAMPLE_MEMBERS);
   const fileRef = useRef();
+
+  useEffect(() => {
+    if (!members) {
+      api.get("/users").then((res) => {
+        const users = res.data || [];
+        setUserList(users.length ? users.map(u => ({ id: u._id || u.id, name: u.name, avatar: u.profileImage || "/avatar.jpg" })) : SAMPLE_MEMBERS);
+      }).catch(() => setUserList(SAMPLE_MEMBERS));
+    }
+  }, [members]);
 
   useEffect(() => {
     setTitle(task.title || "");
@@ -40,7 +52,7 @@ export default function TaskModal({ task, onClose, onUpdate, onDelete }) {
     setDue(task.due ? new Date(task.due).toISOString().slice(0, 16) : "");
   }, [task]);
 
-  function handleSave() {
+  async function handleSave() {
     const patch = {
       title,
       desc,
@@ -49,8 +61,12 @@ export default function TaskModal({ task, onClose, onUpdate, onDelete }) {
       assignees,
       due: due ? new Date(due).toISOString() : null
     };
-    onUpdate(patch);
-    onClose();
+    try {
+      await api.put(`/tasks/${task._id || task.id}`, patch);
+      if (onClose) onClose();
+    } catch (e) {
+      // Optionally show error toast
+    }
   }
 
   function handleAddComment() {
@@ -98,8 +114,8 @@ export default function TaskModal({ task, onClose, onUpdate, onDelete }) {
           <div>
             <div className="text-sm font-medium mb-2">Assignees</div>
             <div className="flex gap-2 items-center mb-2">
-              {SAMPLE_MEMBERS.map((m) => {
-                const active = assignees.find((a) => a.id === m.id);
+              {userList.map((m) => {
+                const active = assignees.find((a) => a.id === m.id || a === m.id);
                 return (
                   <button key={m.id} onClick={() => toggleAssignee(m)} className={`flex items-center gap-2 p-2 rounded-md ${active ? "bg-white/6" : "bg-white/3"}`}>
                     <Image src={m.avatar} width={28} height={28} className="rounded-full" alt={m.name} />
@@ -160,10 +176,14 @@ export default function TaskModal({ task, onClose, onUpdate, onDelete }) {
         open={showDeleteConfirm}
         onClose={() => setShowDeleteConfirm(false)}
         text={`Are you sure you want to delete "${task.title}"? This cannot be undone.`}
-        onConfirm={() => {
-          onDelete && onDelete();
+        onConfirm={async () => {
+          try {
+            await api.delete(`/tasks/${task._id || task.id}`);
+            if (onClose) onClose();
+          } catch (e) {
+            // Optionally show error toast
+          }
           setShowDeleteConfirm(false);
-          onClose();
         }}
       />
     </div>

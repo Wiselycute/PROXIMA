@@ -8,9 +8,15 @@ export default function AddProjectModal({ open, onClose, onCreate }) {
 
   if (!open) return null;
 
-  const handleSubmit = () => {
-    onCreate({ name, description: desc });
-    onClose();
+  const handleSubmit = async () => {
+    try {
+      const payload = { name, description: desc };
+      const api = (await import("@/lib/api")).default;
+      await api.post("/projects", payload);
+      if (onClose) onClose();
+    } catch (e) {
+      // Optionally show error toast
+    }
   };
 
   return (

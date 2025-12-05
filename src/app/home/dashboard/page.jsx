@@ -91,7 +91,7 @@
 // }
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus, Search } from "lucide-react";
 import { Line, Doughnut } from "react-chartjs-2";
 import {
@@ -107,6 +107,7 @@ import {
 import Sidebar from "@/components/Sidebar";
 import Topbar from "@/components/Topbar";
 import AddProjectModal from "@/components/Kanban/AddProjectModal";
+import api from "@/lib/api";
 import { motion } from 'framer-motion';
 
 ChartJS.register(
@@ -142,35 +143,94 @@ function StatCard({ label, value, delay }) {
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState("Monthly");
   const [showAddProjectModal, setShowAddProjectModal] = useState(false);
-  const [projects, setProjects] = useState([
-    { id: "p-1", label: "W", title: "Website Redesign", subtitle: "Redesign company website with new branding", members: 3, status: "Active", progress: 65, color: "bg-blue-500" },
-    { id: "p-2", label: "M", title: "Mobile App", subtitle: "iOS and Android development", members: 4, status: "Active", progress: 42, color: "bg-purple-500" },
-    { id: "p-3", label: "D", title: "Dashboard Design", subtitle: "Internal analytics platform", members: 2, status: "Planning", progress: 20, color: "bg-green-500" }
-  ]);
+  const [projects, setProjects] = useState([]);
+  const [stats, setStats] = useState({ tasks: 0, teams: 0, completed: 0, users: 0 });
+  const [allTasks, setAllTasks] = useState([]);
 
-  const handleAddProject = (data) => {
-    const newProject = {
-      id: `p-${Date.now()}`,
-      label: data.name.charAt(0).toUpperCase(),
-      title: data.name,
-      subtitle: data.description,
-      members: 0,
-      status: "Active",
-      progress: 0,
-      color: ["bg-blue-500", "bg-purple-500", "bg-green-500"][Math.floor(Math.random() * 3)]
-    };
-    setProjects([...projects, newProject]);
+  const handleAddProject = async (data) => {
+    try {
+      const res = await api.post("/projects", { name: data.name, description: data.description });
+      const created = res.data;
+      setProjects((p) => [
+        ...p,
+        {
+          id: created._id || created.id,
+          label: (created.name || data.name).charAt(0).toUpperCase(),
+          title: created.name || data.name,
+          subtitle: created.description || data.description || "",
+          members: (created.members || []).length || 0,
+          status: created.status || "Active",
+          progress: created.progress || 0,
+          color: ["bg-blue-500", "bg-purple-500", "bg-green-500"][Math.floor(Math.random() * 3)],
+        },
+      ]);
+    } catch (err) {
+      console.warn("Failed to create project", err);
+    }
   };
 
+  useEffect(() => {
+    let mounted = true;
+    async function load() {
+      try {
+        const [pjRes, tRes, uRes] = await Promise.all([api.get("/projects"), api.get("/tasks"), api.get("/users")]);
+        if (!mounted) return;
+        const pj = pjRes.data || [];
+        const tasks = tRes.data || [];
+        const users = uRes.data || [];
+        setProjects(pj.map((p) => ({ id: p._id || p.id, label: (p.name || "P").charAt(0).toUpperCase(), title: p.name || p.title, subtitle: p.description || "", members: (p.members || []).length || 0, status: p.status || "Active", progress: p.progress || 0, color: "bg-indigo-500" })));
+        setStats({ tasks: tasks.length, teams: (pj.length || 0), completed: tasks.filter((t) => {
+          const colTitle = t?.columnId?.title || t?.column?.title || "";
+          return /done|completed/i.test(colTitle);
+        }).length, users: users.length });
+        setAllTasks(tasks);
+      } catch (err) {
+        console.warn("Dashboard data load failed, using defaults", err);
+        // fallback minimal defaults
+        setProjects([]);
+        setStats({ tasks: 0, teams: 0, completed: 0, users: 0 });
+      }
+    }
+    load();
+    return () => { mounted = false; };
+  }, []);
+
+  // Build chart data from tasks: last 12 months
+  const getLast12Months = () => {
+    const months = [];
+    const now = new Date();
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      months.push(d.toLocaleString(undefined, { month: "short" }));
+    }
+    return months;
+  };
+
+  const months = getLast12Months();
+
+  const completedSeries = new Array(12).fill(0);
+  const inprogressSeries = new Array(12).fill(0);
+
+  allTasks.forEach((t) => {
+    const created = new Date(t.createdAt || t.created_at || t.created || Date.now());
+    const monthIndex = (created.getFullYear() - new Date().getFullYear()) === 0
+      ? (created.getMonth() - new Date().getMonth() + 11) * 0 + created.getMonth()
+      : created.getMonth();
+    // normalize month index into 0-11 relative to months array (approximate)
+    const diffMonths = (new Date().getFullYear() - created.getFullYear()) * 12 + (new Date().getMonth() - created.getMonth());
+    const idx = 11 - Math.min(11, Math.max(0, diffMonths));
+
+    const colTitle = t?.columnId?.title || t?.column?.title || "";
+    const isDone = /done|completed/i.test(colTitle);
+    if (isDone) completedSeries[idx] += 1; else inprogressSeries[idx] += 1;
+  });
+
   const lineData = {
-    labels: [
-      "May", "Jun", "Jul", "Aug", "Sep", "Oct", 
-      "Nov", "Dec", "Jan", "Feb", "Mar", "Apr",
-    ],
+    labels: months,
     datasets: [
       {
         label: "Completed",
-        data: [20, 60, 150, 300, 250, 200, 180, 220, 260, 280, 320, 270],
+        data: completedSeries,
         tension: 0.4,
         borderWidth: 3,
         borderColor: "rgba(84,112,255,1)",
@@ -178,7 +238,7 @@ export default function DashboardPage() {
       },
       {
         label: "In Progress",
-        data: [10, 40, 80, 150, 180, 130, 100, 120, 140, 160, 200, 190],
+        data: inprogressSeries,
         tension: 0.4,
         borderWidth: 3,
         borderColor: "rgba(0,204,153,1)",
@@ -187,15 +247,18 @@ export default function DashboardPage() {
     ],
   };
 
+  // donut: breakdown by column title
+  const colCounts = {};
+  allTasks.forEach((t) => {
+    const title = (t?.columnId?.title || t?.column?.title || "Unassigned").trim();
+    colCounts[title] = (colCounts[title] || 0) + 1;
+  });
+  const donutLabels = Object.keys(colCounts).length ? Object.keys(colCounts) : ["To Do", "In Progress", "Done"];
+  const donutValues = donutLabels.map((l) => colCounts[l] || 0);
+  const palette = ["#F4A261", "#4A90E2", "#2ECC71", "#C9B7ED", "#9B72CF", "#5A62EA"];
   const donutData = {
-    labels: ["To Do", "In Progress", "Done"],
-    datasets: [
-      {
-        data: [2, 2, 2],
-        backgroundColor: ["#F4A261", "#4A90E2", "#2ECC71"],
-        borderWidth: 0,
-      },
-    ],
+    labels: donutLabels,
+    datasets: [{ data: donutValues, backgroundColor: donutLabels.map((_, i) => palette[i % palette.length]), borderWidth: 0 }],
   };
 
   return (
@@ -228,10 +291,10 @@ export default function DashboardPage() {
 
          {/* stat card */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 flex bg-[var(--background)] mx-6 ">
-              <StatCard label="Active tasks" value={87} delay={0.05} />
-              <StatCard label="Teams" value={12} delay={0.1} />
-              <StatCard label="Completed" value={430} delay={0.15} />
-              <StatCard label="Users" value={98} delay={0.2} />
+              <StatCard label="Active tasks" value={stats.tasks} delay={0.05} />
+              <StatCard label="Projects" value={stats.teams} delay={0.1} />
+              <StatCard label="Completed" value={stats.completed} delay={0.15} />
+              <StatCard label="Users" value={stats.users} delay={0.2} />
             </div>
 
      
@@ -291,7 +354,7 @@ export default function DashboardPage() {
       </div>
        {/* Project Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3p-4 sm:p-6 space-y-4 w-full gap-4">
-        {projects.map(p => (
+        {projects.map((p) => (
           <ProjectCard
             key={p.id}
             label={p.label}

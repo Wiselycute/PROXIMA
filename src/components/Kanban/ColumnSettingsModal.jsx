@@ -7,9 +7,14 @@ export default function ColumnSettingsModal({ open, onClose, column, onRename, o
 
   if (!open) return null;
 
-  const handleRename = () => {
-    onRename(name);
-    onClose();
+  const handleRename = async () => {
+    try {
+      const api = (await import("@/lib/api")).default;
+      await api.put(`/columns/${column._id || column.id}`, { title: name });
+      if (onClose) onClose();
+    } catch (e) {
+      // Optionally show error toast
+    }
   };
 
   return (
@@ -41,7 +46,15 @@ export default function ColumnSettingsModal({ open, onClose, column, onRename, o
         <hr className="my-6 border-white/10" />
 
         <button
-          onClick={onDelete}
+          onClick={async () => {
+            try {
+              const api = (await import("@/lib/api")).default;
+              await api.delete(`/columns/${column._id || column.id}`);
+              if (onClose) onClose();
+            } catch (e) {
+              // Optionally show error toast
+            }
+          }}
           className="w-full py-3 bg-red-600 rounded-xl hover:bg-red-700 flex items-center justify-center gap-2"
         >
           <Trash size={16} /> Delete Column

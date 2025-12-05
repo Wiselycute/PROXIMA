@@ -30,17 +30,22 @@ export default function EditTaskModal({
 
   if (!open) return null;
 
-  const handleSave = () => {
-    onSave({
-      ...task,
-      title,
-      description: desc,
-      columnId,
-      assignees,
-      priority,
-      dueDate,
-    });
-    onClose();
+  const handleSave = async () => {
+    try {
+      const payload = {
+        title,
+        description: desc,
+        columnId,
+        assignees,
+        priority,
+        dueDate,
+      };
+      const api = (await import("@/lib/api")).default;
+      await api.put(`/tasks/${task._id || task.id}`, payload);
+      if (onClose) onClose();
+    } catch (e) {
+      // Optionally show error toast
+    }
   };
 
   return (

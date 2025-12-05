@@ -5,8 +5,28 @@ import { Button } from "@/components/ui/button";
 import  Link  from 'next/link';
 import Sidebar from "@/components/Sidebar";
 import Topbar from "@/components/Topbar";
+import { useState, useEffect } from "react";
+import api from "@/lib/api";
 
 export default function AccountManagementPage() {
+  const [userId, setUserId] = useState(null);
+  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
+
+  useEffect(() => {
+    let mounted = true;
+    api.get("/users").then((res) => {
+      if (!mounted) return;
+      const list = res.data || [];
+      if (list.length) {
+        const u = list[0];
+        setUserId(u._id || u.id);
+        setUsername(u.name || "");
+        setEmail(u.email || "");
+      }
+    }).catch((err) => console.warn("Account: failed to load user", err));
+    return () => { mounted = false; };
+  }, []);
   return (
     <div className="min-h-screen flex bg-[var(--background)]">
               <Sidebar />
@@ -37,6 +57,8 @@ export default function AccountManagementPage() {
             <div className="flex flex-col">
               <label className="text-sm opacity-70">Username</label>
               <Input
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 placeholder="yourusername"
                 className="bg-white/5 border-white/10 mt-1 text-white"
               />
@@ -46,6 +68,8 @@ export default function AccountManagementPage() {
             <div className="flex flex-col">
               <label className="text-sm opacity-70">Email</label>
               <Input
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
                 className="bg-white/5 border-white/10 mt-1 text-white"
               />
@@ -58,7 +82,20 @@ export default function AccountManagementPage() {
                 Deleting your account is permanent and cannot be undone.
               </p>
 
-              <Button className="bg-red-600 hover:bg-red-500 px-4">
+              <Button
+                onClick={async () => {
+                  if (!userId) return alert("No user loaded");
+                  if (!confirm("Delete account? This cannot be undone.")) return;
+                  try {
+                    await api.delete(`/users/${userId}`);
+                    alert("Account deleted (client only). Refresh to update.");
+                  } catch (err) {
+                    console.error(err);
+                    alert("Failed to delete account");
+                  }
+                }}
+                className="bg-red-600 hover:bg-red-500 px-4"
+              >
                 Delete My Account
               </Button>
             </div>

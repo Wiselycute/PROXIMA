@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import { Camera, User2, Lock } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -8,9 +8,33 @@ import { Button } from "@/components/ui/button";
 import Sidebar from "@/components/Sidebar";
 import Topbar from "@/components/Topbar";
 import Link  from 'next/link';
+import api from "@/lib/api";
 
 export default function ProfileSettings() {
   const [image, setImage] = useState("/avatar.jpg");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [userId, setUserId] = useState(null);
+
+  useEffect(() => {
+    let mounted = true;
+    api.get("/users").then((res) => {
+      if (!mounted) return;
+      const users = res.data || [];
+      if (users.length) {
+        const u = users[0];
+        setUserId(u._id || u.id);
+        setName(u.name || "");
+        setEmail(u.email || "");
+        if (u.profileImage) setImage(u.profileImage);
+      }
+    }).catch((err) => {
+      console.warn("Profile: failed to load user", err);
+    });
+    return () => { mounted = false; };
+  }, []);
 
   return (
     <div className="min-h-screen flex bg-[var(--background)]">
@@ -77,6 +101,8 @@ export default function ProfileSettings() {
                 <User2 size={16} /> Full Name
               </label>
               <Input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
                 placeholder="Enter full name"
                 className="bg-white/5 border-white/10 text-white w-full"
               />
@@ -86,6 +112,8 @@ export default function ProfileSettings() {
             <div className="flex flex-col ">
               <label className="text-gray-300 text-sm mb-1 flex items-center gap-2">Email Address</label>
               <Input
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 placeholder="example@gmail.com"
                 className="bg-white/5 border-white/10 text-white"
               />
@@ -97,6 +125,8 @@ export default function ProfileSettings() {
                 <Lock size={16} /> Current Password
               </label>
               <Input
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
                 type="password"
                 placeholder="Enter current password"
                 className="bg-white/5 border-white/10 text-white w-full"
@@ -107,6 +137,8 @@ export default function ProfileSettings() {
             <div className="flex flex-col">
               <label className="text-gray-300 text-sm mb-1">New Password</label>
               <Input
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
                 type="password"
                 placeholder="Enter new password"
                 className="bg-white/5 border-white/10 text-white"
@@ -117,7 +149,23 @@ export default function ProfileSettings() {
           {/* ----------- BUTTONS ----------- */}
           <div className="mt-10 flex justify-end gap-3">
             <button className="px-4 py-2 rounded bg-white/6">Cancel</button>
-            <button className="px-4 py-2 rounded btn-neon bg-[#3AB4F2]">Save Changes</button>
+            <button
+              onClick={async () => {
+                if (!userId) return alert("No user loaded");
+                const payload = { name, email };
+                if (newPassword) payload.password = newPassword;
+                try {
+                  await api.put(`/users/${userId}`, payload);
+                  alert("Profile updated");
+                } catch (err) {
+                  console.error(err);
+                  alert("Failed to update profile");
+                }
+              }}
+              className="px-4 py-2 rounded btn-neon bg-[#3AB4F2]"
+            >
+              Save Changes
+            </button>
           </div>
         </div>
       </div>

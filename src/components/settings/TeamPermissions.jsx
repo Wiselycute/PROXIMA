@@ -1,9 +1,10 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import RoleDropdown from "./RoleDropdown";
 import { useToast } from "@/components/ui/ToastProvider";
 import  Link  from 'next/link';
+import api from "@/lib/api";
 
 /* mock members */
 const MOCK = [
@@ -20,15 +21,41 @@ export default function TeamPermissions() {
       return raw ? JSON.parse(raw) : MOCK;
     } catch { return MOCK; }
   });
+
+  useEffect(() => {
+    let mounted = true;
+    api
+      .get("/users")
+      .then((res) => {
+        if (!mounted) return;
+        const data = res.data || [];
+        const norm = data.map((u) => ({ id: u._id || u.id, name: u.name || "Unknown", email: u.email || "", role: (u.role || "member").charAt(0).toUpperCase() + (u.role || "member").slice(1), avatar: u.profileImage || "/team/alex.jpg" }));
+        setMembers(norm.length ? norm : MOCK);
+      })
+      .catch((err) => {
+        console.warn("TeamPermissions: failed to load users", err);
+        setMembers(MOCK);
+      });
+    return () => { mounted = false; };
+  }, []);
   const { push } = useToast();
 
-  function changeRole(id, role) {
+  async function changeRole(id, role) {
+    // map UI role to API role enum (lowercase)
+    const apiRole = role.toLowerCase() === "viewer" ? "member" : role.toLowerCase();
     setMembers((m) => {
       const next = m.map((x) => (x.id === id ? { ...x, role } : x));
       try { localStorage.setItem("proxima-members", JSON.stringify(next)); } catch {}
       return next;
     });
-    push({ title: "Role updated", description: `Role set to ${role}`, duration: 2400 });
+
+    try {
+      await api.put(`/users/${id}`, { role: apiRole });
+      push({ title: "Role updated", description: `Role set to ${role}`, duration: 2400 });
+    } catch (err) {
+      console.warn("Failed to update role", err);
+      push({ title: "Update failed", description: "Could not update role on server", intent: "error" });
+    }
   }
 
   return (
