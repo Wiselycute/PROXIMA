@@ -1,15 +1,26 @@
 import { connectDB } from "@/lib/mongodb";
 import Project from "@/models/Project";
+import { NextResponse } from "next/server";
 
 export async function GET() {
-  await connectDB();
-  const projects = await Project.find().populate("members");
-  return Response.json(projects);
+  try {
+    await connectDB();
+    const projects = await Project.find().populate("members");
+    return NextResponse.json(projects);
+  } catch (err) {
+    console.error("GET /api/projects error", err);
+    return NextResponse.json({ error: "Failed to fetch projects" }, { status: 500 });
+  }
 }
 
 export async function POST(req) {
-  await connectDB();
-  const data = await req.json();
-  const project = await Project.create(data);
-  return Response.json(project);
+  try {
+    await connectDB();
+    const data = await req.json();
+    const project = await Project.create(data);
+    return NextResponse.json(project, { status: 201 });
+  } catch (err) {
+    console.error("POST /api/projects error", err);
+    return NextResponse.json({ error: "Failed to create project" }, { status: 500 });
+  }
 }

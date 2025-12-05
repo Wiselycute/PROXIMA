@@ -2,7 +2,32 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import KanbanColumn from "./KanbanColumn";
-import NewTaskModal from "./NewTaskModal";
+import TaskModal from "./Kanban/TaskModal";
+
+// The repository previously referenced a missing `NewTaskModal` component.
+// Provide a small inline wrapper that reuses `TaskModal` for creating new tasks.
+function NewTaskModal({ projectId, refresh }) {
+  const [open, setOpen] = useState(false);
+
+  async function handleCreate(patch) {
+    try {
+      await axios.post(`/api/projects/${projectId}/tasks`, patch);
+      setOpen(false);
+      refresh();
+    } catch (err) {
+      console.error("Failed to create task", err);
+    }
+  }
+
+  return (
+    <>
+      <div className="flex items-center">
+        <button onClick={() => setOpen(true)} className="ml-2 px-3 py-1 rounded-md bg-[var(--primary)] text-white">+ New Task</button>
+      </div>
+      {open && <TaskModal task={{}} onClose={() => setOpen(false)} onUpdate={handleCreate} />}
+    </>
+  );
+}
 
 export default function KanbanBoard({ projectId }) {
   const [board, setBoard] = useState([]);

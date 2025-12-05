@@ -18,7 +18,7 @@ export default function Hero() {
               className="inline-block w-2.5 h-2.5 rounded-full text-primary"
               style={{ background: "var(--primary)" }}
             />
-            <span>PROXIMA-Powered task manger</span>
+            <span>PROXIMA-Powered task manager</span>
           </div>
 
           <h1 className="text-3xl md:text-5xl lg:text-6xl font-extrabold leading-tight">

@@ -16,7 +16,7 @@ export default function Footer() {
           
           {/* Brand */}
           <div>
-            <h3 className="text-2xl font-extrabold tracking-tight">Proxima</h3>
+            <h3 className="text-2xl font-extrabold text-[#3AB4F2] tracking-tight">Proxima</h3>
             <p className="text-sm opacity-70 mt-4">
               Working closely together.  
               The modern task management platform built for teams who value clarity.

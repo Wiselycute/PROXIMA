@@ -1,4 +1,4 @@
-// components/GlowBackground.jsx
+
 export default function GlowBackground({ className = "" }) {
   return (
     <div

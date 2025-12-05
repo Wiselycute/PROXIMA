@@ -18,8 +18,7 @@ export default function Navbar() {
       <nav className="fixed w-full z-30 backdrop-blur-md bg-white/6 dark:bg-black/30 border-b border-transparent dark:border-zinc-800">
         <div className="container mx-auto px-4 md:px-8 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-pf-purple to-pf-purple-600 shadow-glow flex items-center justify-center text-white font-bold">TF</div>
-            <span className="font-semibold">TeamFlow</span>
+            <div className="w-10 h-10 font-bold rounded-full bg-gradient-to-br from-pf-purple to-pf-purple-600 shadow-glow flex items-center justify-center text-[#3AB4F2] font-bold">PROXIMA</div>
           </div>
 
           <div className="hidden md:flex items-center gap-6">
@@ -28,7 +27,7 @@ export default function Navbar() {
             <a href="#about" className="text-sm hover:underline">About</a>
             <a href="#contact" className="text-sm hover:underline">Contact</a>
             <ModeToggle/>
-            <Button className="bg-pf-purple text-white">Get Started</Button>
+            <Button className="bg-primary text-white ">Get Started</Button>
           </div>
 
           <div className="md:hidden flex items-center gap-3">
