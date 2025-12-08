@@ -2,7 +2,8 @@ import mongoose from "mongoose";
 
 const TaskSchema = new mongoose.Schema({
   projectId: { type: mongoose.Schema.Types.ObjectId, ref: "Project", required: true },
-  columnId: { type: mongoose.Schema.Types.ObjectId, ref: "Column", required: true },
+  columnId: { type: String },
+  // columnId: { type: mongoose.Schema.Types.ObjectId, ref: "Column", required: true },
 
   title: { type: String, required: true },
   description: String,

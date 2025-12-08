@@ -9,6 +9,7 @@ import MobileMenu from "./MobileMenu";
 import { Button } from "@/components/ui/button";
 import { ModeToggle } from "./ModeToggle";
 
+
 export default function Navbar() {
   const [open, setOpen] = useState(false);
   const { theme, setTheme } = useTheme();
@@ -27,7 +28,7 @@ export default function Navbar() {
             <a href="#about" className="text-sm hover:underline">About</a>
             <a href="#contact" className="text-sm hover:underline">Contact</a>
             <ModeToggle/>
-            <Button className="bg-primary text-white ">Get Started</Button>
+            <Link href="/auth/signup" className="bg-primary text-white p-2 rounded-md">Get Started</Link>
           </div>
 
           <div className="md:hidden flex items-center gap-3">

@@ -1,14 +1,31 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation"; // Import to highlight active link
+import { usePathname, useRouter } from "next/navigation";
 import { Users, Folder, Settings, Grid, Menu, X, FileText } from "lucide-react";
 
 export default function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
-  const pathname = usePathname(); // Get current route
+  const [user, setUser] = useState(null);
+  const pathname = usePathname();
+  const router = useRouter();
+
+  useEffect(() => {
+    const loadUser = () => {
+      const storedUser = localStorage.getItem("user");
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
+      }
+    };
+
+    loadUser();
+
+    // Listen for storage changes (profile image updates)
+    window.addEventListener("storage", loadUser);
+    return () => window.removeEventListener("storage", loadUser);
+  }, []);
 
   // Helper to determine if a link is active
   const isActive = (path) => pathname === path;
@@ -104,23 +121,28 @@ export default function Sidebar() {
 
           <div className="mt-6 flex items-center gap-3 px-2">
             <div className="relative">
-              {/* Ensure "avatar.jpg" is inside your public folder */}
               <Image
-                src="/avatar.jpg" 
+                src={user?.profileImage || "/avatar.jpg"}
                 width={40}
                 height={40}
-                className="rounded-full object-cover border border-white/10"
+                className="rounded-full object-cover border border-white/10 w-10 h-10"
                 alt="User Avatar"
               />
               <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-gray-900 rounded-full"></span>
             </div>
             <div className="flex-1 min-w-0">
-              <div className="text-sm font-medium text-white truncate">Mostafa Mahmoud</div>
-              <div className="text-xs text-gray-400 truncate">admin@proxima.com</div>
+              <div className="text-sm font-medium text-white truncate">{user?.name || "Guest"}</div>
+              <div className="text-xs text-gray-400 truncate">{user?.email || ""}</div>
             </div>
           </div>
 
-          <button className="mt-4 w-full py-2 rounded-md border border-white/10 text-gray-400 hover:text-white hover:bg-white/5 text-xs flex items-center justify-center gap-2 transition">
+          <button 
+            onClick={() => {
+              localStorage.removeItem("user");
+              router.push("/auth/signin");
+            }}
+            className="mt-4 w-full py-2 rounded-md border border-white/10 text-gray-400 hover:text-white hover:bg-white/5 text-xs flex items-center justify-center gap-2 transition"
+          >
             Log out
           </button>
         </div>

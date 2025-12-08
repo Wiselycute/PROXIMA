@@ -156,7 +156,18 @@ export default function BoardPage() {
           setApiLoaded(true);
           // pick projectId from first column if available
           const firstCol = Object.values(columns)[0];
-          if (firstCol && firstCol.projectId) setBoardProjectId(firstCol.projectId);
+          if (firstCol && firstCol.projectId) {
+            setBoardProjectId(firstCol.projectId);
+          } else {
+            // Fallback: fetch first project and use its ID
+            api.get("/projects").then(res => {
+              const projects = res.data || [];
+              if (projects.length > 0) {
+                const firstProjectId = projects[0]._id || projects[0].id;
+                setBoardProjectId(firstProjectId);
+              }
+            }).catch(() => {});
+          }
         }
       } catch (err) {
         // silently ignore; fall back to localStorage/default board
@@ -493,6 +504,7 @@ export default function BoardPage() {
             onClose={() => setTaskModalOpen(false)}
             onCreate={handleAddTaskFromModal}
             defaultColumnId={selectedColumnForNewTask}
+            projectId={boardProjectId}
             columns={Object.values(board.columns).map(c => ({ _id: c.id, title: c.title }))}
             members={[
               { _id: "u-1", name: "Alex Morgan" },

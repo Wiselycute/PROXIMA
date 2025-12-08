@@ -1,8 +1,47 @@
 "use client";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 
 export default function SignInPage() {
+  const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+
+    try {
+      const res = await fetch("/api/users/authentication", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || "Sign in failed");
+        setLoading(false);
+        return;
+      }
+
+      // Store user data in localStorage
+      localStorage.setItem("user", JSON.stringify(data.user));
+      
+      // Redirect to dashboard
+      router.push("/home/dashboard");
+    } catch (err) {
+      setError("Something went wrong. Please try again.");
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-pink-300 via-purple-300 to-indigo-400 p-4">
       
@@ -40,11 +79,19 @@ export default function SignInPage() {
             Welcome back. Enter your personal details to access your account.
           </p>
 
-          <form className="space-y-5">
+          {error && (
+            <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-sm">
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <label className="text-gray-700 text-sm font-semibold">Email</label>
               <input
                 type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 className="w-full mt-1 p-3 rounded-lg bg-white/40 border border-white/50 outline-none focus:ring-2 focus:ring-indigo-300"
                 placeholder="Enter email"
                 required
@@ -55,6 +102,8 @@ export default function SignInPage() {
               <label className="text-gray-700 text-sm font-semibold">Password</label>
               <input
                 type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 className="w-full mt-1 p-3 rounded-lg bg-white/40 border border-white/50 outline-none focus:ring-2 focus:ring-indigo-300"
                 placeholder="Enter password"
                 required
@@ -63,15 +112,16 @@ export default function SignInPage() {
 
             <button
               type="submit"
-              className="w-full mt-4 bg-gradient-to-r from-purple-700 to-indigo-900 text-white py-3 rounded-full font-bold shadow-lg hover:opacity-90 transition"
+              disabled={loading}
+              className="w-full mt-4 bg-gradient-to-r from-purple-700 to-indigo-900 text-white py-3 rounded-full font-bold shadow-lg hover:opacity-90 transition disabled:opacity-50"
             >
-              Sign In
+              {loading ? "Signing In..." : "Sign In"}
             </button>
           </form>
 
           <p className="text-center text-sm mt-6 text-gray-800">
-            Don’t have an account?{" "}
-            <Link href="/signup" className="font-semibold text-purple-900 underline">
+            Don't have an account?{" "}
+            <Link href="/auth/signup" className="font-semibold text-purple-900 underline">
               Sign Up
             </Link>
           </p>

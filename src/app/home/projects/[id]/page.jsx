@@ -177,29 +177,28 @@ export default function ProjectPage() {
     { id: "done", title: "Done", color: "#F39ACB" }
   ];
 
-  const handleAddTask = (data) => {
-    // create on server
-    (async () => {
-      try {
-        const payload = {
-          title: data.title,
-          description: data.description || "",
-          dueDate: data.dueDate,
-          priority: data.priority,
-          columnId: data.columnId,
-          projectId: projectId,
-          assignees: data.assignees || []
-        };
-        const res = await axios.post('/api/tasks', payload);
-        const created = { ...res.data, id: res.data._id || res.data.id };
-        setTasks(prev => [...prev, created]);
-        setShowAddTask(false);
-      } catch (err) {
-        console.error('Failed to create task', err);
-        alert('Failed to create task');
-      }
-    })();
-  };
+  const handleAddTask = async (data) => {
+  try {
+    const payload = {
+      title: data.title,
+      description: data.description || "",
+      dueDate: data.dueDate,
+      priority: data.priority,
+      columnId: data.columnId,
+      projectId,
+      assignees: data.assignees || []
+    };
+
+    const res = await axios.post("/api/tasks", payload);
+    const created = { ...res.data, id: res.data._id };
+
+    setTasks(prev => [...prev, created]);
+    setShowAddTask(false);
+  } catch (err) {
+    console.error(err);
+    alert("Failed to create task");
+  }
+};
 
   const handleEditTask = (data) => {
     (async () => {
@@ -242,9 +241,9 @@ export default function ProjectPage() {
     })();
   };
 
-  const todoTasks = tasks.filter(t => t.column === "todo");
-  const inprogressTasks = tasks.filter(t => t.column === "inprogress");
-  const doneTasks = tasks.filter(t => t.column === "done");
+  const todoTasks = tasks.filter(t => t.columnId === "todo");
+  const inprogressTasks = tasks.filter(t => t.columnId === "inprogress");
+  const doneTasks = tasks.filter(t => t.columnId === "done");
 
   return (
     <>
@@ -391,12 +390,18 @@ export default function ProjectPage() {
     {/* Modals */}
     
     <AddTaskModal
-      open={showAddTask}
-      onClose={() => setShowAddTask(false)}
-      onCreate={handleAddTask}
-      columns={[{ _id: "todo", title: "To Do" }]}
-      members={[]}
-    />
+  open={showAddTask}
+  onClose={() => setShowAddTask(false)}
+  onCreate={handleAddTask}
+  projectId={projectId}
+  defaultColumnId="todo"
+  columns={[
+    { _id: "todo", title: "To Do" },
+    { _id: "inprogress", title: "In Progress" },
+    { _id: "done", title: "Done" }
+  ]}
+  members={[]}
+/>
 
     <EditTaskModal
       open={showEditTask}

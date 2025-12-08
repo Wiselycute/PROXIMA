@@ -3,7 +3,8 @@ import User from "@/models/User";
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
 
-export async function GET(request, { params }) {
+export async function GET(request, context) {
+  const params = await context.params;
   try {
     await connectDB();
     const user = await User.findById(params.id).select("-password");
@@ -15,7 +16,8 @@ export async function GET(request, { params }) {
   }
 }
 
-export async function PUT(req, { params }) {
+export async function PUT(req, context) {
+  const params = await context.params;
   try {
     await connectDB();
     const data = await req.json();
@@ -32,7 +34,8 @@ export async function PUT(req, { params }) {
   }
 }
 
-export async function DELETE(request, { params }) {
+export async function DELETE(request, context) {
+  const params = await context.params;
   try {
     await connectDB();
     const deleted = await User.findByIdAndDelete(params.id);

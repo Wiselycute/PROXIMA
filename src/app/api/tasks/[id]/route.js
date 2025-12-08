@@ -1,8 +1,12 @@
 import { connectDB } from "@/lib/mongodb";
 import Task from "@/models/Task";
+import User from "@/models/User";
+import Column from "@/models/Column";
+import Project from "@/models/Project";
 import { NextResponse } from "next/server";
 
-export async function GET(request, { params }) {
+export async function GET(request, context) {
+  const params = await context.params;
   try {
     await connectDB();
     const task = await Task.findById(params.id)
@@ -17,7 +21,8 @@ export async function GET(request, { params }) {
   }
 }
 
-export async function PUT(req, { params }) {
+export async function PUT(req, context) {
+  const params = await context.params;
   try {
     await connectDB();
     const data = await req.json();
@@ -30,7 +35,8 @@ export async function PUT(req, { params }) {
   }
 }
 
-export async function DELETE(request, { params }) {
+export async function DELETE(request, context) {
+  const params = await context.params;
   try {
     await connectDB();
     const doc = await Task.findByIdAndDelete(params.id);

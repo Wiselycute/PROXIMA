@@ -2,7 +2,8 @@ import { connectDB } from "@/lib/mongodb";
 import Column from "@/models/Column";
 import { NextResponse } from "next/server";
 
-export async function GET(req, { params }) {
+export async function GET(req, context) {
+  const params = await context.params;
   try {
     await connectDB();
     const column = await Column.findById(params.id);
@@ -14,7 +15,8 @@ export async function GET(req, { params }) {
   }
 }
 
-export async function PUT(req, { params }) {
+export async function PUT(req, context) {
+  const params = await context.params;
   try {
     await connectDB();
     const data = await req.json();
@@ -27,7 +29,8 @@ export async function PUT(req, { params }) {
   }
 }
 
-export async function DELETE(req, { params }) {
+export async function DELETE(req, context) {
+  const params = await context.params;
   try {
     await connectDB();
     const deleted = await Column.findByIdAndDelete(params.id);

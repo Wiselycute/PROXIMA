@@ -9,6 +9,7 @@ import Sidebar from "@/components/Sidebar";
 import Topbar from "@/components/Topbar";
 import Link  from 'next/link';
 import api from "@/lib/api";
+import ProfileImageUpload from "@/components/ProfileImageUpload";
 
 export default function ProfileSettings() {
   const [image, setImage] = useState("/avatar.jpg");
@@ -19,21 +20,13 @@ export default function ProfileSettings() {
   const [userId, setUserId] = useState(null);
 
   useEffect(() => {
-    let mounted = true;
-    api.get("/users").then((res) => {
-      if (!mounted) return;
-      const users = res.data || [];
-      if (users.length) {
-        const u = users[0];
-        setUserId(u._id || u.id);
-        setName(u.name || "");
-        setEmail(u.email || "");
-        if (u.profileImage) setImage(u.profileImage);
-      }
-    }).catch((err) => {
-      console.warn("Profile: failed to load user", err);
-    });
-    return () => { mounted = false; };
+    const user = JSON.parse(localStorage.getItem("user") || "{}");
+    if (user.id) {
+      setUserId(user.id);
+      setName(user.name || "");
+      setEmail(user.email || "");
+      setImage(user.profileImage || "/avatar.jpg");
+    }
   }, []);
 
   return (
@@ -64,33 +57,11 @@ export default function ProfileSettings() {
 
           {/* ----------- AVATAR ----------- */}
           <div className="flex items-center gap-6 mb-10">
-            <div className="relative">
-                <div className="w-24 h-24 rounded-full shadow-lg relative overflow-hidden">
-              <Image
-                src={image}
-                width={90}
-                height={90}
-                alt="Avatar"
-                className="w-full h-full object-cover rounded-full border-2 border-indigo-500/40 shadow-lg"
-              />
-                </div>
-              <label className="absolute bottom-0 right-0 bg-indigo-600 p-2 rounded-full cursor-pointer shadow-md hover:bg-indigo-500 transition">
-                <Camera size={16} className="text-white" />
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => {
-                    if (e.target.files?.[0]) {
-                      const fileURL = URL.createObjectURL(e.target.files[0]);
-                      setImage(fileURL);
-                    }
-                  }}
-                />
-              </label>
-            </div>
-
-            <p className="text-gray-400 text-sm">PNG, JPG, GIF — Max 1MB</p>
+            <ProfileImageUpload 
+              currentImage={image} 
+              onImageUpdate={(newUrl) => setImage(newUrl)}
+            />
+            <p className="text-gray-400 text-sm">Click on your profile image to upload a new one. PNG, JPG, GIF — Max 10MB</p>
           </div>
 
           {/* ----------- FORM FIELDS ----------- */}

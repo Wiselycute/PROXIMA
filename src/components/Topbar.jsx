@@ -1,9 +1,27 @@
 "use client";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import { Moon, Bell } from "lucide-react";
 import { ModeToggle } from "./ModeToggle";
 
 export default function Topbar() {
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const loadUser = () => {
+      const storedUser = localStorage.getItem("user");
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
+      }
+    };
+
+    loadUser();
+
+    // Listen for storage changes (profile image updates)
+    window.addEventListener("storage", loadUser);
+    return () => window.removeEventListener("storage", loadUser);
+  }, []);
+
   return (
     <header 
       className="
@@ -14,12 +32,12 @@ export default function Topbar() {
       "
     >
       <div className="flex items-center gap-4">
-        <div className="text-lg font-semibold">Hi, Mostafa</div>
+        <div className="text-lg font-semibold">Hi, {user?.name || "Guest"}</div>
       </div>
 
       <div className="flex items-center gap-3">
         <ModeToggle />
-        <Image src="/avatar.jpg" width={36} height={36} className="rounded-full object-cover" alt="me" />
+        <Image src={user?.profileImage || "/avatar.jpg"} width={36} height={36} className="rounded-full object-cover w-9 h-9" alt="User" />
       </div>
     </header>
   );

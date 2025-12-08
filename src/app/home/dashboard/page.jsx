@@ -146,6 +146,15 @@ export default function DashboardPage() {
   const [projects, setProjects] = useState([]);
   const [stats, setStats] = useState({ tasks: 0, teams: 0, completed: 0, users: 0 });
   const [allTasks, setAllTasks] = useState([]);
+  const [user, setUser] = useState(null);
+
+  // Load user from localStorage
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    }
+  }, []);
 
   const handleAddProject = async (data) => {
     try {
@@ -269,9 +278,16 @@ export default function DashboardPage() {
 
       {/* Header */}
       <div className="flex flex-col bg-[var(--background)] sticky top-0 z-10 sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h1 className="text-xl sm:text-2xl font-semibold text-white p-4">
-          Dashboard
-        </h1>
+        <div>
+          <h1 className="text-xl sm:text-2xl font-semibold text-white p-4">
+            Dashboard
+          </h1>
+          {user && (
+            <p className="text-sm text-gray-400 px-4">
+              Welcome back, <span className="font-semibold text-white">{user.name}</span>
+            </p>
+          )}
+        </div>
 
         <div className="flex bg-[var(--background)] flex-col sm:flex-row gap-3  sm:items-center">
           <div className="relative w-full sm:w-64">

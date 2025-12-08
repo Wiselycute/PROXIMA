@@ -1,5 +1,8 @@
 import { connectDB } from "@/lib/mongodb";
 import Task from "@/models/Task";
+import User from "@/models/User";
+import Column from "@/models/Column";
+import Project from "@/models/Project";
 import { NextResponse } from "next/server";
 
 export async function GET(request) {
@@ -22,8 +25,19 @@ export async function GET(request) {
 
     return NextResponse.json(tasks);
   } catch (err) {
-    console.error("GET /api/tasks error", err);
-    return NextResponse.json({ error: "Failed to fetch tasks" }, { status: 500 });
+    console.error("GET /api/tasks error", {
+      error: err.message,
+      stack: err.stack,
+      projectId,
+      time: new Date().toISOString()
+    });
+    return NextResponse.json(
+      { 
+        error: "Failed to fetch tasks",
+        details: process.env.NODE_ENV === 'development' ? err.message : undefined 
+      }, 
+      { status: 500 }
+    );
   }
 }
 
