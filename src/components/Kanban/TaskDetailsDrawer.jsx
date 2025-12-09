@@ -1,10 +1,39 @@
 "use client";
 import { X, Clock, AlertCircle, CheckCircle, Users, CheckCircle2 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 
-export default function TaskDetailsDrawer({ open, onClose, task, comments, onAddComment }) {
+export default function TaskDetailsDrawer({ open, onClose, task, comments: initialComments, onAddComment }) {
   const [newComment, setNewComment] = useState("");
+  const [comments, setComments] = useState(initialComments || []);
+  const [loading, setLoading] = useState(false);
+
+  // Fetch comments when drawer opens
+  useEffect(() => {
+    if (!open || !task) return;
+    
+    const fetchComments = async () => {
+      const taskId = task._id || task.id;
+      if (!taskId || taskId.toString().startsWith("t-")) {
+        setComments(initialComments || []);
+        return;
+      }
+
+      setLoading(true);
+      try {
+        const api = (await import("@/lib/api")).default;
+        const { data } = await api.get(`/tasks/${taskId}`);
+        setComments(data.comments || []);
+      } catch (e) {
+        console.error("Failed to fetch comments:", e);
+        setComments(initialComments || []);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchComments();
+  }, [open, task, initialComments]);
 
   if (!open) return null;
 
@@ -34,6 +63,10 @@ export default function TaskDetailsDrawer({ open, onClose, task, comments, onAdd
       });
       setNewComment("");
       
+      // Reload comments after adding
+      const { data } = await api.get(`/tasks/${taskId}`);
+      setComments(data.comments || []);
+      
       // Notify parent to reload comments
       if (onAddComment) {
         onAddComment(newComment);
@@ -60,13 +93,13 @@ export default function TaskDetailsDrawer({ open, onClose, task, comments, onAdd
   const isCompleted = task?.status === "completed";
 
   return (
-    <div className="fixed inset-0 z-[400] flex">
+    <div className="fixed inset-0 z-[400] flex rounded-2xl">
 
       {/* Background */}
       <div className="flex-1 bg-black/40 backdrop-blur-md" onClick={onClose}></div>
 
       {/* Drawer */}
-      <div className="w-full max-w-md bg-[#15182A] border-l border-white/10 p-6 animate-in slide-in-from-right duration-300 flex flex-col overflow-hidden">
+      <div className="w-full max-w-md bg-[var(--background)]  border-l border-white/10 p-6 animate-in slide-in-from-right duration-300 flex flex-col overflow-hidden">
 
         {/* Header */}
         <div className="flex justify-between items-start mb-6">

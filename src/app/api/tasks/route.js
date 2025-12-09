@@ -3,6 +3,7 @@ import Task from "@/models/Task";
 import User from "@/models/User";
 import Column from "@/models/Column";
 import Project from "@/models/Project";
+import Comment from "@/models/Comment";
 import { NextResponse } from "next/server";
 
 export async function GET(request) {
@@ -23,7 +24,28 @@ export async function GET(request) {
       .populate("columnId")
       .populate("projectId");
 
-    return NextResponse.json(tasks);
+    // Fetch comments for all tasks
+    const taskIds = tasks.map(t => t._id);
+    const comments = await Comment.find({ taskId: { $in: taskIds } }).populate("author");
+    
+    // Group comments by taskId
+    const commentsByTask = {};
+    comments.forEach(comment => {
+      const taskId = comment.taskId.toString();
+      if (!commentsByTask[taskId]) {
+        commentsByTask[taskId] = [];
+      }
+      commentsByTask[taskId].push(comment);
+    });
+    
+    // Add comments to each task
+    const tasksWithComments = tasks.map(task => {
+      const taskObj = task.toObject();
+      taskObj.comments = commentsByTask[task._id.toString()] || [];
+      return taskObj;
+    });
+
+    return NextResponse.json(tasksWithComments);
   } catch (err) {
     console.error("GET /api/tasks error", {
       error: err.message,

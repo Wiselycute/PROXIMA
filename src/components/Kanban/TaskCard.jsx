@@ -281,7 +281,16 @@ export default function TaskCard({ task, index, onUpdate, onDelete, columns = []
             const taskId = task._id || task.id;
             if (taskId && !taskId.toString().startsWith("t-")) {
               const { data } = await api.get(`/tasks/${taskId}`);
-              onUpdate({ comments: data.comments || [] });
+              // Update task with all fresh data including comments
+              onUpdate({ 
+                comments: data.comments || [],
+                title: data.title,
+                description: data.description,
+                assignees: data.assignees,
+                priority: data.priority,
+                status: data.status,
+                dueDate: data.dueDate
+              });
             }
           } catch (e) {
             console.error("Failed to reload task comments:", e);
