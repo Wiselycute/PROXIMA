@@ -69,15 +69,9 @@ export default function AddTaskModal({
       dueDate,
     };
 
-    try {
-      const api = (await import("@/lib/api")).default;
-      await api.post("/tasks", payload);
-      if (onCreate) onCreate(payload); // Notify parent to refresh
-      if (onClose) onClose();
-    } catch (err) {
-      console.error("Failed to create task", err);
-      alert("Failed to create task. Check console for details.");
-    }
+    // Just notify parent to create the task - don't create it here
+    if (onCreate) onCreate(payload);
+    if (onClose) onClose();
   };
 
   return (

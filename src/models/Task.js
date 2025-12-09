@@ -16,6 +16,15 @@ const TaskSchema = new mongoose.Schema({
     default: "medium" 
   },
 
+  status: {
+    type: String,
+    enum: ["todo", "in-progress", "completed"],
+    default: "todo"
+  },
+
+  completedAt: Date,
+  completedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+
   dueDate: Date,
   order: { type: Number, default: 0 }, // sorting inside a column
 }, { timestamps: true });

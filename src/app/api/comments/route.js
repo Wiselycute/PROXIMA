@@ -17,10 +17,17 @@ export async function POST(req) {
   try {
     await connectDB();
     const data = await req.json();
+    
+    // Validate required fields
+    if (!data.text || !data.taskId) {
+      return NextResponse.json({ error: "Text and taskId are required" }, { status: 400 });
+    }
+
     const comment = await Comment.create(data);
-    return NextResponse.json(comment, { status: 201 });
+    const populated = await Comment.findById(comment._id).populate("author");
+    return NextResponse.json(populated, { status: 201 });
   } catch (err) {
     console.error("POST /api/comments error", err);
-    return NextResponse.json({ error: "Failed to create comment" }, { status: 500 });
+    return NextResponse.json({ error: err.message || "Failed to create comment" }, { status: 500 });
   }
 }

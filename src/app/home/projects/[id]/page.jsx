@@ -110,31 +110,54 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
-import { Plus, LayoutGrid, List, Trash2, Edit, MoreVertical } from "lucide-react";
+import { Plus, ArrowLeft, Users as UsersIcon, Calendar, TrendingUp, CheckCircle2, Clock, Circle } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import Sidebar from "@/components/Sidebar";
 import Topbar from "@/components/Topbar";
-import AddTaskModal from "@/components/Kanban/AddTaskModal";
-import EditTaskModal from "@/components/Kanban/EditTaskModal";
-import DeleteConfirmationModal from "@/components/Kanban/DeleteConfirmationModal";
 import { useParams } from "next/navigation";
-import axios from "axios";
+import api from "@/lib/api";
+import {
+  DndContext,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  closestCenter,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import Column from "@/components/Kanban/Column";
+import AddTaskModal from "@/components/Kanban/AddTaskModal";
+import ProjectProgress from "@/components/ProjectProgress";
 
-export default function ProjectPage() {
+export default function ProjectDetailPage() {
   const params = useParams();
   const projectId = params?.id;
   const [project, setProject] = useState(null);
+  const [board, setBoard] = useState({
+    columns: {},
+    tasks: {},
+    columnOrder: []
+  });
+  const [activeId, setActiveId] = useState(null);
+  const [taskModalOpen, setTaskModalOpen] = useState(false);
+  const [selectedColumnForNewTask, setSelectedColumnForNewTask] = useState("todo");
+  const [progressRefresh, setProgressRefresh] = useState(0);
+  const [members, setMembers] = useState([]);
 
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+
+  // Load project details
   useEffect(() => {
     if (!projectId) return;
     let mounted = true;
     async function load() {
       try {
-        const res = await axios.get(`/api/projects/${projectId}`);
+        const res = await api.get(`/projects/${projectId}`);
         if (!mounted) return;
         setProject(res.data);
       } catch (err) {
@@ -145,364 +168,532 @@ export default function ProjectPage() {
     return () => { mounted = false; };
   }, [projectId]);
 
-  const [tasks, setTasks] = useState([]);
-
-  // load tasks for this project
+  // Load board data (columns and tasks for this project)
   useEffect(() => {
     if (!projectId) return;
     let mounted = true;
-    async function loadTasks() {
+    async function loadBoard() {
       try {
-        const res = await axios.get(`/api/tasks?projectId=${encodeURIComponent(projectId)}`);
+        const tasksRes = await api.get(`/tasks?projectId=${projectId}`);
         if (!mounted) return;
-        const list = res.data.map(t => ({ ...t, id: t._id || t.id }));
-        setTasks(list);
+
+        const tasks = tasksRes.data || [];
+
+        console.log(`Loaded ${tasks.length} tasks for project ${projectId}`, tasks);
+
+        // Create default columns
+        const columns = {
+          "todo": { id: "todo", title: "To Do", taskIds: [] },
+          "in-progress": { id: "in-progress", title: "In Progress", taskIds: [] },
+          "done": { id: "done", title: "Done", taskIds: [] }
+        };
+        const columnOrder = ["todo", "in-progress", "done"];
+
+        const tasksMap = {};
+        
+        tasks.forEach((t) => {
+          const id = t._id || t.id;
+          const status = t.status || "todo";
+          
+          // Map status to column
+          let colId;
+          if (status === "completed" || status === "done") {
+            colId = "done";
+          } else if (status === "in-progress") {
+            colId = "in-progress";
+          } else {
+            colId = "todo";
+          }
+          
+          tasksMap[id] = {
+            id,
+            title: t.title || "Untitled",
+            desc: t.description || "",
+            assignees: t.assignees || [],
+            due: t.dueDate || null,
+            comments: t.comments || [],
+            priority: t.priority || "low",
+            columnId: colId,
+            status: status,
+            _id: t._id
+          };
+
+          // Add task to the appropriate column
+          columns[colId].taskIds.push(id);
+        });
+
+        console.log("Board state:", { 
+          columns, 
+          tasks: tasksMap, 
+          columnOrder, 
+          taskCount: tasks.length,
+          todoCount: columns.todo.taskIds.length,
+          inProgressCount: columns["in-progress"].taskIds.length,
+          doneCount: columns.done.taskIds.length
+        });
+        
+        setBoard({ columns, tasks: tasksMap, columnOrder });
       } catch (err) {
-        console.error("Failed to load tasks", err);
+        console.error("Failed to load board", err);
       }
     }
-    loadTasks();
+    loadBoard();
     return () => { mounted = false; };
-  }, [projectId]);
+  }, [projectId, progressRefresh]);
 
-  const [showAddTask, setShowAddTask] = useState(false);
-  const [showEditTask, setShowEditTask] = useState(false);
-  const [showDeleteTask, setShowDeleteTask] = useState(false);
-  const [selectedTask, setSelectedTask] = useState(null);
-  const [showProjectMenu, setShowProjectMenu] = useState(false);
+  // Load team members
+  useEffect(() => {
+    let mounted = true;
+    api.get("/users").then((res) => {
+      if (!mounted) return;
+      setMembers(res.data || []);
+    }).catch(() => {});
+    return () => { mounted = false; };
+  }, []);
 
-  const columns = [
-    { id: "todo", title: "To Do", color: "#4BE2F2" },
-    { id: "inprogress", title: "In Progress", color: "#9B72CF" },
-    { id: "done", title: "Done", color: "#F39ACB" }
-  ];
+  const findColumnForTask = useCallback(
+    (taskId) => Object.values(board.columns).find((c) => c.taskIds.includes(taskId))?.id,
+    [board]
+  );
 
-  const handleAddTask = async (data) => {
-  try {
-    const payload = {
-      title: data.title,
-      description: data.description || "",
-      dueDate: data.dueDate,
-      priority: data.priority,
-      columnId: data.columnId,
-      projectId,
-      assignees: data.assignees || []
+  function handleDragStart(event) {
+    setActiveId(event.active.id);
+  }
+
+  function handleDragEnd(event) {
+    const { active, over } = event;
+    setActiveId(null);
+    if (!over) return;
+
+    const activeId = active.id;
+    const overId = over.id;
+
+    const sourceColId = findColumnForTask(activeId);
+    const destColId = findColumnForTask(overId) || overId;
+    if (!sourceColId || !destColId) return;
+
+    if (sourceColId === destColId) {
+      const col = board.columns[sourceColId];
+      if (!col || !col.taskIds) return;
+      
+      const oldIndex = col.taskIds.indexOf(activeId);
+      const newIndex = col.taskIds.indexOf(overId);
+      if (oldIndex !== newIndex) {
+        const newTaskIds = arrayMove(col.taskIds, oldIndex, newIndex);
+        setBoard((prev) => ({
+          ...prev,
+          columns: { ...prev.columns, [sourceColId]: { ...col, taskIds: newTaskIds } },
+        }));
+      }
+      return;
+    }
+
+    // Moving between columns
+    const source = board.columns[sourceColId];
+    const dest = board.columns[destColId];
+    if (!source || !dest || !source.taskIds || !dest.taskIds) return;
+    const newSourceIds = source.taskIds.filter((id) => id !== activeId);
+
+    let insertAt = dest.taskIds.length;
+    const overIndex = dest.taskIds.indexOf(overId);
+    if (overIndex !== -1) insertAt = overIndex;
+
+    const newDestIds = [...dest.taskIds.slice(0, insertAt), activeId, ...dest.taskIds.slice(insertAt)];
+
+    // Map column IDs to status
+    const getStatusFromColumnId = (colId) => {
+      const col = board.columns[colId];
+      if (!col) return "todo";
+      const title = col.title.toLowerCase();
+      if (title.includes("progress") || title.includes("doing")) return "in-progress";
+      if (title.includes("done") || title.includes("complete")) return "completed";
+      return "todo";
     };
 
-    const res = await axios.post("/api/tasks", payload);
-    const created = { ...res.data, id: res.data._id };
+    const newStatus = getStatusFromColumnId(destColId);
+    
+    setBoard((prev) => ({
+      ...prev,
+      tasks: {
+        ...prev.tasks,
+        [activeId]: {
+          ...prev.tasks[activeId],
+          status: newStatus,
+          columnId: destColId
+        }
+      },
+      columns: {
+        ...prev.columns,
+        [sourceColId]: { ...source, taskIds: newSourceIds },
+        [destColId]: { ...dest, taskIds: newDestIds },
+      },
+    }));
 
-    setTasks(prev => [...prev, created]);
-    setShowAddTask(false);
-  } catch (err) {
-    console.error(err);
-    alert("Failed to create task");
+    // Update on server
+    if (!activeId.toString().startsWith('t-')) {
+      (async () => {
+        try {
+          const user = JSON.parse(localStorage.getItem("user") || "{}");
+          const updatePayload = { 
+            columnId: destColId,
+            status: newStatus
+          };
+          
+          // Add completion metadata if moving to completed
+          if (newStatus === "completed") {
+            updatePayload.completedAt = new Date().toISOString();
+            updatePayload.completedBy = user.id;
+          } else {
+            updatePayload.completedAt = null;
+            updatePayload.completedBy = null;
+          }
+          
+          await api.put(`/tasks/${activeId}`, updatePayload);
+          setProgressRefresh(prev => prev + 1);
+        } catch (err) {
+          console.warn("Failed to persist task move", err);
+        }
+      })();
+    }
   }
-};
 
-  const handleEditTask = (data) => {
-    (async () => {
-      try {
-        const id = data.id || selectedTask?.id || selectedTask?._id;
-        if (!id) return;
-        const payload = {
-          title: data.title,
-          description: data.description,
-          dueDate: data.dueDate,
-          priority: data.priority,
-          columnId: data.columnId,
-          assignees: data.assignees || data.assignees || []
-        };
-        const res = await axios.put(`/api/tasks/${id}`, payload);
-        const updated = { ...res.data, id: res.data._id || res.data.id };
-        setTasks(prev => prev.map(t => (t.id === updated.id || t._id === updated.id ? updated : t)));
-        setShowEditTask(false);
-        setSelectedTask(null);
-      } catch (err) {
-        console.error('Failed to update task', err);
-        alert('Failed to update task');
+  async function handleAddTask(data) {
+    try {
+      // Validate projectId
+      if (!projectId) {
+        console.error("No project ID available");
+        alert("Cannot create task: No project ID");
+        return;
       }
-    })();
-  };
 
-  const handleDeleteTask = () => {
-    (async () => {
-      try {
-        const id = selectedTask?.id || selectedTask?._id;
-        if (!id) return;
-        await axios.delete(`/api/tasks/${id}`);
-        setTasks(prev => prev.filter(t => (t.id || t._id) !== id));
-        setShowDeleteTask(false);
-        setSelectedTask(null);
-      } catch (err) {
-        console.error('Failed to delete task', err);
-        alert('Failed to delete task');
+      // Map column ID to status
+      let status = "todo";
+      if (data.columnId === "in-progress") {
+        status = "in-progress";
+      } else if (data.columnId === "done") {
+        status = "completed";
       }
-    })();
-  };
 
-  const todoTasks = tasks.filter(t => t.columnId === "todo");
-  const inprogressTasks = tasks.filter(t => t.columnId === "inprogress");
-  const doneTasks = tasks.filter(t => t.columnId === "done");
+      const payload = {
+        title: data.title,
+        description: data.description || "",
+        assignees: data.assignees || [],
+        dueDate: data.dueDate || null,
+        priority: data.priority || "medium",
+        status: status,
+        projectId,
+      };
+
+      console.log("Creating task with payload:", payload);
+      
+      const res = await api.post("/tasks", payload);
+      const t = res.data;
+
+      console.log("Task created:", t);
+
+      // Refresh the board to reload all tasks from the server
+      setProgressRefresh(prev => prev + 1);
+      setTaskModalOpen(false);
+    } catch (err) {
+      console.error("Failed to create task", err);
+      alert("Failed to create task: " + (err.response?.data?.message || err.message));
+    }
+  }
+
+  function updateTask(taskId, patch) {
+    setBoard((prev) => {
+      if (!prev.tasks[taskId]) {
+        console.warn("Task not found:", taskId);
+        return prev;
+      }
+      
+      return {
+        ...prev,
+        tasks: { ...prev.tasks, [taskId]: { ...prev.tasks[taskId], ...patch } }
+      };
+    });
+
+    if (!taskId.toString().startsWith('t-')) {
+      (async () => {
+        try {
+          await api.put(`/tasks/${taskId}`, patch);
+          if (patch.status) {
+            setProgressRefresh(prev => prev + 1);
+          }
+        } catch (err) {
+          console.warn("Failed to update task", err);
+        }
+      })();
+    }
+  }
+
+  async function deleteTask(taskId) {
+    if (!taskId.toString().startsWith('t-')) {
+      try {
+        await api.delete(`/tasks/${taskId}`);
+        setProgressRefresh(prev => prev + 1);
+      } catch (err) {
+        console.warn("Failed to delete task", err);
+      }
+    }
+
+    setBoard((prev) => {
+      const newTasks = { ...prev.tasks };
+      delete newTasks[taskId];
+      const newCols = { ...prev.columns };
+      Object.keys(newCols).forEach((cid) => {
+        if (newCols[cid] && newCols[cid].taskIds) {
+          newCols[cid] = {
+            ...newCols[cid],
+            taskIds: newCols[cid].taskIds.filter((id) => id !== taskId)
+          };
+        }
+      });
+      return { ...prev, tasks: newTasks, columns: newCols };
+    });
+  }
+
+  const completedTasks = Object.values(board.tasks).filter(t => t.status === "completed").length;
+  const totalTasks = Object.values(board.tasks).length;
+  const inProgressTasks = Object.values(board.tasks).filter(t => t.status === "in-progress").length;
+  const todoTasks = Object.values(board.tasks).filter(t => t.status === "todo").length;
+  const progressPercentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
   return (
-    <>
-    <div className="min-h-screen flex bg-[var(--background)] text-[var(--foreground)]">
+    <div className="min-h-screen flex bg-[var(--background)] text-foreground">
       <Sidebar />
-      <div className="flex-1">
+      <div className="flex-1 overflow-hidden bg-[var(--background)]">
         <Topbar />
-        <main className="p-8 w-full">
-          <div className="min-h-screen w-full px-6 py-8">
-            {/* HEADER */}
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center justify-between">
-                <h1 className="text-2xl font-semibold flex items-center gap-2">
-                  {project?.name || "Loading..."}
-                  <span className="inline-block w-3 h-3 rounded-full bg-[#4BE2F2]"></span>
-                </h1>
-                <div className="relative">
-                  <button onClick={() => setShowProjectMenu(!showProjectMenu)} className="p-2 hover:bg-white/10 rounded transition">
-                    <MoreVertical size={20} />
-                  </button>
-                  {showProjectMenu && (
-                    <div className="absolute right-0 mt-2 w-32 bg-[#1B1F36] border border-white/10 rounded-xl shadow-lg z-50">
-                      <button className="w-full text-left px-4 py-2 hover:bg-white/5 flex items-center gap-2 text-sm">
-                        <Edit size={14} /> Edit
-                      </button>
-                      <button className="w-full text-left px-4 py-2 hover:bg-white/5 flex items-center gap-2 text-sm text-red-400">
-                        <Trash2 size={14} /> Delete
-                      </button>
-                    </div>
-                  )}
+        <main className="h-[calc(100vh-4rem)] overflow-y-auto">
+          <div className="max-w-[1800px] mx-auto p-6 lg:p-8 space-y-6">
+            
+            {/* Header Section */}
+            <div className="rounded-lg bg-[var(--background)]  p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-4">
+                  <Link href="/home/projects">
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="rounded-lg bg-[var(--background)] hover:bg-gray-600"
+                    >
+                      <ArrowLeft size={20} />
+                    </Button>
+                  </Link>
+                  <div>
+                    <h1 className="text-3xl font-bold ">
+                      {project?.name || "Loading..."}
+                    </h1>
+                    <p className="text-gray-400 mt-1">{project?.description || "No description"}</p>
+                  </div>
                 </div>
-              </div>
-              <p className="text-muted-foreground">{project?.description}</p>
-            </div>
-
-            {/* TOP BAR BUTTONS */}
-            <div className="flex items-center justify-between mt-5">
-              <div className="w-full max-w-3xl">
-                <Progress value={project?.progress || 0} className="h-3" />
-                <div className="flex justify-between text-sm mt-1 text-muted-foreground">
-                  <span>Progress</span>
-                  <span>{project?.progress ?? 0}% complete</span>
-                </div>
-              </div>
-
-              <div className="flex gap-2">
-                <Link href="/home/board" className="rounded-xl flex items-center gap-2 px-3 py-2 hover:bg-white/5">
-                  <LayoutGrid size={16} /> Kanban
-                </Link>
-                <Link href="/home/projects/project-list" className="rounded-xl flex items-center gap-2 px-3 py-2 hover:bg-white/5">
-                  <List size={16} /> List
-                </Link>
-                <Button onClick={() => setShowAddTask(true)} className="rounded-xl bg-[#9B72CF] hover:bg-[#815ab6] text-white flex items-center gap-2">
-                  <Plus size={16} /> Add Task
+                <Button
+                  onClick={() => {
+                    setSelectedColumnForNewTask(board.columnOrder[0] || "todo");
+                    setTaskModalOpen(true);
+                  }}
+                  className="bg-purple-600 hover:bg-purple-700 text-white rounded-lg px-6 py-2"
+                >
+                  <Plus size={18} /> <span className="ml-2">New Task</span>
                 </Button>
               </div>
-            </div>
 
-            {/* MAIN CONTENT */}
-            <div className="mt-8 grid grid-cols-1 lg:grid-cols-4 gap-6">
+              {/* Quick Stats Row */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+                <div className="bg-[var(--background)] rounded-lg p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-lg bg-blue-600 flex items-center justify-center">
+                      <CheckCircle2 className="text-white" size={24} />
+                    </div>
+                    <div>
+                      <div className="text-2xl font-bold text-white">{totalTasks}</div>
+                      <div className="text-sm text-gray-400">Total Tasks</div>
+                    </div>
+                  </div>
+                </div>
 
-              {/* COLUMN PREVIEW SECTION */}
-              <div className="lg:col-span-3 flex gap-4 overflow-x-auto pb-3 scrollbar-hide">
-                {/* Column Card */}
-                <ColumnCard
-                  title="To Do"
-                  tasks={todoTasks}
-                  onEditTask={(task) => {
-                    setSelectedTask(task);
-                    setShowEditTask(true);
-                  }}
-                  onDeleteTask={(task) => {
-                    setSelectedTask(task);
-                    setShowDeleteTask(true);
-                  }}
-                />
+                <div className="bg-[var(--background)] rounded-lg p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-lg bg-green-600 flex items-center justify-center">
+                      <CheckCircle2 className="text-white" size={24} />
+                    </div>
+                    <div>
+                      <div className="text-2xl font-bold text-white">{completedTasks}</div>
+                      <div className="text-sm text-gray-400">Completed</div>
+                    </div>
+                  </div>
+                </div>
 
-                <ColumnCard
-                  title="In Progress"
-                  tasks={inprogressTasks}
-                  onEditTask={(task) => {
-                    setSelectedTask(task);
-                    setShowEditTask(true);
-                  }}
-                  onDeleteTask={(task) => {
-                    setSelectedTask(task);
-                    setShowDeleteTask(true);
-                  }}
-                />
+                <div className="bg-[var(--background)] rounded-lg p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-lg bg-purple-600 flex items-center justify-center">
+                      <TrendingUp className="text-white" size={24} />
+                    </div>
+                    <div>
+                      <div className="text-2xl font-bold text-white">{progressPercentage}%</div>
+                      <div className="text-sm text-gray-400">Progress</div>
+                    </div>
+                  </div>
+                </div>
 
-                <ColumnCard
-                  title="Done"
-                  tasks={doneTasks}
-                  onEditTask={(task) => {
-                    setSelectedTask(task);
-                    setShowEditTask(true);
-                  }}
-                  onDeleteTask={(task) => {
-                    setSelectedTask(task);
-                    setShowDeleteTask(true);
-                  }}
-                />
+                <div className="bg-[var(--background)] rounded-lg p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-lg bg-orange-600 flex items-center justify-center">
+                      <UsersIcon className="text-white" size={24} />
+                    </div>
+                    <div>
+                      <div className="text-2xl font-bold text-white">{members.length}</div>
+                      <div className="text-sm text-gray-400">Team Members</div>
+                    </div>
+                  </div>
+                </div>
               </div>
-
-              {/* TEAM MEMBERS SIDEBAR */}
-              <aside className="rounded-2xl border bg-card p-5 shadow-sm">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="font-semibold text-lg">Team Members</h2>
-                  <button className="text-sm text-[#4BE2F2] hover:underline">+ Add</button>
-                </div>
-
-                <div className="space-y-4">
-
-                  <TeamMember
-                    name="Alex Morgan"
-                    role="Admin"
-                    status="online"
-                    avatar="/avatars/1.png"
-                  />
-
-                  <TeamMember
-                    name="Jamie Chen"
-                    role="Member"
-                    status="online"
-                    avatar="/avatars/2.png"
-                  />
-
-                  <TeamMember
-                    name="Taylor Swift"
-                    role="Member"
-                    status="offline"
-                    avatar="/avatars/3.png"
-                  />
-
-                </div>
-              </aside>
-
             </div>
+
+            {/* Progress Section */}
+            <div className="bg-[var(--background)] p-4 rounded-lg ">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-white">Overall Progress</h3>
+                <span className="text-2xl font-bold text-white">{progressPercentage}%</span>
+              </div>
+              <div className="relative w-full h-3 bg-gray-700 rounded-full overflow-hidden mb-4">
+                <div 
+                  className="absolute inset-y-0 left-0 bg-purple-600 rounded-full transition-all duration-500"
+                  style={{ width: `${progressPercentage}%` }}
+                ></div>
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="text-center p-3 rounded-lg bg-[var(--background)]">
+                  <div className="text-2xl font-bold text-green-400">{completedTasks}</div>
+                  <div className="text-xs text-gray-400 mt-1">Completed</div>
+                </div>
+                <div className="text-center p-3 rounded-lg bg-[var(--background)]">
+                  <div className="text-2xl font-bold text-blue-400">{inProgressTasks}</div>
+                  <div className="text-xs text-gray-400 mt-1">In Progress</div>
+                </div>
+                <div className="text-center p-3 rounded-lg bg-[var(--background)]">
+                  <div className="text-2xl font-bold text-gray-300">{todoTasks}</div>
+                  <div className="text-xs text-gray-400 mt-1">To Do</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Kanban Board Section */}
+            <div className="bg-[var(--background)] p-6 rounded-lg border border-gray-700">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold ">Project Board</h2>
+                <div className="text-sm text-gray-400">
+                  Total: <span className="font-semibold text-white">{totalTasks}</span> tasks
+                </div>
+              </div>
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragStart={handleDragStart}
+                onDragEnd={handleDragEnd}
+              >
+                <div className="flex gap-5 overflow-x-auto scrollbar-hide  pb-6">
+                  {board.columnOrder
+                    .map((colId) => board.columns[colId])
+                    .filter((col) => col && col.title && Array.isArray(col.taskIds))
+                    .map((column) => {
+                      const columnTasks = column.taskIds
+                        .map(taskId => board.tasks[taskId])
+                        .filter(task => !!task);
+                      
+                      return (
+                        <Column
+                          key={column.id}
+                          column={column}
+                          tasks={columnTasks}
+                          onAddTask={() => {
+                            setSelectedColumnForNewTask(column.id);
+                            setTaskModalOpen(true);
+                          }}
+                          onUpdateTask={updateTask}
+                          onDeleteTask={deleteTask}
+                          columns={Object.values(board.columns).filter(c => c && c.id && c.title).map(c => ({ _id: c.id, title: c.title }))}
+                          members={members}
+                          onRenameColumn={(colId, newName) => {
+                            setBoard((prev) => {
+                              const targetCol = prev.columns[colId];
+                              if (!targetCol) return prev;
+                              
+                              return {
+                                ...prev,
+                                columns: {
+                                  ...prev.columns,
+                                  [colId]: { ...targetCol, title: newName }
+                                }
+                              };
+                            });
+                          }}
+                          onDeleteColumn={(colId) => {
+                            console.log("Delete column:", colId);
+                          }}
+                        />
+                      );
+                    })}
+                </div>
+              </DndContext>
+            </div>
+
+            {/* Team Members Section */}
+            <div className="bg-[var(--background)] p-6 rounded-lg ">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold ">Team Members</h2>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="bg-[var(--background)] hover:bg-[var(--primary)] hover:text-white border-gray-600 rounded-lg"
+                >
+                  <Plus size={16} className="mr-2" /> Add Member
+                </Button>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {members.length > 0 ? members.map((member) => (
+                  <div 
+                    key={member._id || member.id} 
+                    className="flex items-center gap-3 p-4 rounded-lg bg-[var(--background)] hover:bg-[var(--background)] hover:text-white"
+                  >
+                    <div className="relative">
+                      <Image
+                        src={member.profileImage || "/avatar.jpg"}
+                        width={48}
+                        height={48}
+                        className="rounded-full w-12 h-12 object-cover"
+                        alt={member.name}
+                      />
+                      <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-gray-700"></div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold truncate text-white">{member.name}</div>
+                      <div className="text-xs text-gray-400 truncate">{member.email}</div>
+                    </div>
+                  </div>
+                )) : (
+                  <div className="col-span-full text-center py-8 text-gray-400">
+                    No team members yet
+                  </div>
+                )}
+              </div>
+            </div>
+
           </div>
         </main>
       </div>
-    </div>
 
-    {/* Modals */}
-    
-    <AddTaskModal
-  open={showAddTask}
-  onClose={() => setShowAddTask(false)}
-  onCreate={handleAddTask}
-  projectId={projectId}
-  defaultColumnId="todo"
-  columns={[
-    { _id: "todo", title: "To Do" },
-    { _id: "inprogress", title: "In Progress" },
-    { _id: "done", title: "Done" }
-  ]}
-  members={[]}
-/>
-
-    <EditTaskModal
-      open={showEditTask}
-      onClose={() => setShowEditTask(false)}
-      task={selectedTask}
-      columns={[
-        { _id: "todo", title: "To Do" },
-        { _id: "inprogress", title: "In Progress" },
-        { _id: "done", title: "Done" }
-      ]}
-      members={[]}
-      onSave={handleEditTask}
-    />
-
-    <DeleteConfirmationModal
-      open={showDeleteTask}
-      onClose={() => setShowDeleteTask(false)}
-      text={`Are you sure you want to delete "${selectedTask?.title}"? This cannot be undone.`}
-      onConfirm={handleDeleteTask}
-    />
-   </>
-  );
-}
-
-/* COLUMN CARD COMPONENT */
-function ColumnCard({ title, tasks, onEditTask, onDeleteTask }) {
-  return (
-    <div className="min-w-[250px] w-[280px] rounded-xl bg-card border shadow-sm p-4">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="font-semibold">{title}</h3>
-        <div className="text-sm text-muted-foreground">{tasks.length}</div>
-      </div>
-
-      {tasks.map((t) => (
-        <div
-          key={t.id}
-          className="group rounded-xl bg-muted p-4 text-sm shadow-sm mb-3 space-y-2 hover:shadow transition"
-        >
-          <div className="flex justify-between items-start gap-2">
-            <p className="font-medium flex-1">{t.title}</p>
-            <div className="opacity-0 group-hover:opacity-100 flex gap-1 transition">
-              <button
-                onClick={() => onEditTask(t)}
-                className="p-1 hover:bg-white/20 rounded"
-                title="Edit"
-              >
-                <Edit size={14} />
-              </button>
-              <button
-                onClick={() => onDeleteTask(t)}
-                className="p-1 hover:bg-red-500/20 rounded"
-                title="Delete"
-              >
-                <Trash2 size={14} />
-              </button>
-            </div>
-          </div>
-
-          <div className="flex justify-between items-center text-xs text-muted-foreground">
-            <p>{t.date}</p>
-            <span
-              className={`px-2 py-1 rounded-lg text-xs ${
-                t.priority === "Low"
-                  ? "bg-green-200 text-green-700"
-                  : t.priority === "Medium"
-                  ? "bg-yellow-200 text-yellow-700"
-                  : "bg-red-200 text-red-700"
-              }`}
-            >
-              {t.priority}
-            </span>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-/* TEAM MEMBER CARD */
-function TeamMember({ name, role, status, avatar }) {
-  return (
-    <div className="flex items-center justify-between">
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-full overflow-hidden">
-          <Image src={avatar} width={40} height={40} alt={name} />
-        </div>
-        <div>
-          <p className="font-medium">{name}</p>
-          <p className="text-xs text-muted-foreground">{role}</p>
-        </div>
-      </div>
-
-      <span
-        className={`text-xs px-2 py-1 rounded-full ${
-          status === "online"
-            ? "bg-green-200 text-green-700"
-            : "bg-gray-300 text-gray-700"
-        }`}
-      >
-        {status}
-      </span>
+      <AddTaskModal
+        open={taskModalOpen}
+        onClose={() => setTaskModalOpen(false)}
+        onCreate={handleAddTask}
+        defaultColumnId={selectedColumnForNewTask}
+        projectId={projectId}
+        columns={Object.values(board.columns)
+          .filter(c => c && c.id && c.title)
+          .map(c => ({ _id: c.id, title: c.title }))}
+        members={members}
+      />
     </div>
   );
 }

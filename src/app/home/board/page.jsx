@@ -91,6 +91,7 @@ import AddColumnModal from "@/components/AddColumnModal";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import TaskCard from "@/components/Kanban/TaskCard";
+import ProjectProgress from "@/components/ProjectProgress";
 
 // ----- LocalStorage Keys -----
 const STORAGE_KEY = "proxima_kanban_data";
@@ -115,10 +116,22 @@ export default function BoardPage() {
   const [colModalOpen, setColModalOpen] = useState(false);
   const [taskModalOpen, setTaskModalOpen] = useState(false);
   const [selectedColumnForNewTask, setSelectedColumnForNewTask] = useState("todo");
+  const [progressRefresh, setProgressRefresh] = useState(0);
+  const [members, setMembers] = useState([]);
 
   useEffect(() => {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) setBoard(JSON.parse(raw));
+  }, []);
+
+  // Load team members
+  useEffect(() => {
+    let mounted = true;
+    api.get("/users").then((res) => {
+      if (!mounted) return;
+      setMembers(res.data || []);
+    }).catch(() => {});
+    return () => { mounted = false; };
   }, []);
 
   // Attempt to load persisted board from API if available
@@ -126,52 +139,105 @@ export default function BoardPage() {
     let mounted = true;
     async function loadFromApi() {
       try {
-        const [colsRes, tasksRes] = await Promise.all([api.get("/columns"), api.get("/tasks")]);
+        const [colsRes, tasksRes, projectsRes] = await Promise.all([
+          api.get("/columns"), 
+          api.get("/tasks"),
+          api.get("/projects")
+        ]);
         if (!mounted) return;
+        
         const cols = colsRes.data || [];
         const tasks = tasksRes.data || [];
+        const projects = projectsRes.data || [];
+
+        // Set project ID first - use first project or create default
+        let projectId = null;
+        if (projects.length > 0) {
+          projectId = projects[0]._id || projects[0].id;
+          setBoardProjectId(projectId);
+        }
 
         // build board structure
         const columns = {};
         const columnOrder = [];
         cols.forEach((c) => {
           const id = c._id || c.id;
-          columns[id] = { id, title: c.title || c.name || "Column", taskIds: (c.taskIds && Array.isArray(c.taskIds) ? c.taskIds : []), projectId: c.projectId || (c.project && c.project._id) || null };
+          columns[id] = { 
+            id, 
+            title: c.title || c.name || "Column", 
+            taskIds: (c.taskIds && Array.isArray(c.taskIds) ? c.taskIds : []), 
+            projectId: c.projectId || (c.project && c.project._id) || projectId 
+          };
           columnOrder.push(id);
         });
 
         const tasksMap = {};
         tasks.forEach((t) => {
           const id = t._id || t.id;
-          tasksMap[id] = { id, title: t.title || t.name || "Untitled", desc: t.description || t.desc || "", assignees: t.assignees || [], due: t.due || null, comments: t.comments || [], priority: t.priority || "low", columnId: t.columnId || null };
-          // ensure task present in column's taskIds
-          const colId = t.columnId || t.column || null;
+          tasksMap[id] = { 
+            id, 
+            title: t.title || t.name || "Untitled", 
+            desc: t.description || t.desc || "", 
+            assignees: t.assignees || [], 
+            due: t.due || null, 
+            comments: t.comments || [], 
+            priority: t.priority || "low", 
+            columnId: t.columnId || null,
+            status: t.status || "todo"
+          };
+          
+          // Add task to column if columnId exists and column is found
+          let colId = t.columnId || t.column || null;
+          
+          // If no columnId, try to infer from status
+          if (!colId || !columns[colId]) {
+            const status = t.status || "todo";
+            // Find column by matching status or title
+            const matchingCol = Object.values(columns).find(c => {
+              const title = c.title.toLowerCase();
+              if (status === "completed" && (title.includes("done") || title.includes("complete"))) return true;
+              if (status === "in-progress" && (title.includes("progress") || title.includes("doing"))) return true;
+              if (status === "todo" && (title.includes("to do") || title.includes("todo"))) return true;
+              return false;
+            });
+            
+            if (matchingCol) {
+              colId = matchingCol.id;
+              tasksMap[id].columnId = colId;
+            } else if (columnOrder.length > 0) {
+              // Fallback to first column
+              colId = columnOrder[0];
+              tasksMap[id].columnId = colId;
+            }
+          }
+          
           if (colId && columns[colId]) {
-            if (!columns[colId].taskIds.includes(id)) columns[colId].taskIds.push(id);
+            if (!columns[colId].taskIds.includes(id)) {
+              columns[colId].taskIds.push(id);
+            }
           }
         });
 
+        console.log("Board loaded:", { columns, tasks: tasksMap, columnOrder, totalTasks: tasks.length });
         if (Object.keys(columns).length) {
           setBoard({ columns, tasks: tasksMap, columnOrder });
           setApiLoaded(true);
-          // pick projectId from first column if available
-          const firstCol = Object.values(columns)[0];
-          if (firstCol && firstCol.projectId) {
-            setBoardProjectId(firstCol.projectId);
-          } else {
-            // Fallback: fetch first project and use its ID
-            api.get("/projects").then(res => {
-              const projects = res.data || [];
-              if (projects.length > 0) {
-                const firstProjectId = projects[0]._id || projects[0].id;
-                setBoardProjectId(firstProjectId);
-              }
-            }).catch(() => {});
-          }
+        } else if (projectId) {
+          // If no columns exist but we have a project, keep the default board with projectId
+          setBoardProjectId(projectId);
         }
+        
+        console.log("Board loaded - Project ID:", projectId);
       } catch (err) {
         // silently ignore; fall back to localStorage/default board
         console.warn("Board: failed to load from API", err);
+        // Try to get at least a project ID
+        api.get("/projects").then(res => {
+          const projects = res.data || [];
+          if (projects.length > 0) {
+            setBoardProjectId(projects[0]._id || projects[0].id);
+          }
+        }).catch(() => {});
       }
     }
 
@@ -241,7 +307,7 @@ export default function BoardPage() {
     }));
 
     // persist move to server if available: update moved task's columnId and order
-    if (apiLoaded) {
+    if (apiLoaded && !activeId.toString().startsWith('t-')) {
       const movedTaskId = activeId;
       const insertAt = newDestIds.indexOf(activeId);
       (async () => {
@@ -303,9 +369,11 @@ export default function BoardPage() {
           const id = t._id || t.id;
           setBoard((prev) => ({
             ...prev,
-            tasks: { ...prev.tasks, [id]: { id, title: t.title, desc: t.description || "", assignees: t.assignees || [], due: t.dueDate || null, comments: [], priority: t.priority || "medium" } },
+            tasks: { ...prev.tasks, [id]: { id, title: t.title, desc: t.description || "", assignees: t.assignees || [], due: t.dueDate || null, comments: [], priority: t.priority || "medium", status: t.status || "todo" } },
             columns: { ...prev.columns, [data.columnId]: { ...prev.columns[data.columnId], taskIds: [id, ...prev.columns[data.columnId].taskIds] } },
           }));
+          // Refresh progress after adding new task
+          setProgressRefresh(prev => prev + 1);
         } catch (err) {
           console.warn("Failed to create task via API", err);
         }
@@ -374,10 +442,20 @@ export default function BoardPage() {
     // optimistic update locally
     setBoard((prev) => ({ ...prev, tasks: { ...prev.tasks, [taskId]: { ...prev.tasks[taskId], ...patch } } }));
 
+    // Skip API call if taskId is temporary (starts with 't-')
+    if (taskId.toString().startsWith('t-')) {
+      console.warn('Cannot update task with temporary ID:', taskId);
+      return;
+    }
+
     if (apiLoaded) {
       (async () => {
         try {
           await api.put(`/tasks/${taskId}`, patch);
+          // Refresh progress when task status changes
+          if (patch.status) {
+            setProgressRefresh(prev => prev + 1);
+          }
         } catch (err) {
           console.warn("Failed to persist task update", err);
         }
@@ -425,9 +503,12 @@ export default function BoardPage() {
   }
 
   async function deleteTask(taskId) {
-    if (apiLoaded) {
+    // Skip API call if taskId is temporary
+    if (apiLoaded && !taskId.toString().startsWith('t-')) {
       try {
         await api.delete(`/tasks/${taskId}`);
+        // Refresh progress after deleting a task
+        setProgressRefresh(prev => prev + 1);
       } catch (err) {
         console.warn("Failed to delete task on server", err);
       }
@@ -452,19 +533,39 @@ export default function BoardPage() {
         <main className="p-4">
           <div className="space-y-6 p-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold">Kanban</h2>
+        <div>
+          <h2 className="text-xl font-bold">Kanban</h2>
+          {boardProjectId && (
+            <p className="text-xs text-white/50 mt-1">Project ID: {boardProjectId}</p>
+          )}
+        </div>
         <div className="flex gap-2">
-          <Button onClick={() => {
-            setSelectedColumnForNewTask("todo");
-            setTaskModalOpen(true);
-          }} className="flex items-center gap-2">
-            <Plus size={14} /> New Task
-          </Button>
-            <Button onClick={() => setColModalOpen(true)} variant="outline" className="flex items-center gap-2">
-              <Plus size={14} /> Add Column
-            </Button>
+          {boardProjectId ? (
+            <>
+              <Button onClick={() => {
+                setSelectedColumnForNewTask("todo");
+                setTaskModalOpen(true);
+              }} className="flex items-center gap-2">
+                <Plus size={14} /> New Task
+              </Button>
+              <Button onClick={() => setColModalOpen(true)} variant="outline" className="flex items-center gap-2">
+                <Plus size={14} /> Add Column
+              </Button>
+            </>
+          ) : (
+            <div className="text-sm text-yellow-500 bg-yellow-500/10 px-4 py-2 rounded-lg border border-yellow-500/30">
+              No project found. Please create a project first to add tasks.
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Project Progress Widget */}
+      {boardProjectId && (
+        <div className="glass-card p-4 rounded-xl">
+          <ProjectProgress projectId={boardProjectId} refreshTrigger={progressRefresh} />
+        </div>
+      )}
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
         <div className="flex gap-6 overflow-x-auto pb-6">
@@ -479,12 +580,14 @@ export default function BoardPage() {
                     key={column.id}
                     column={column}
                     tasks={tasks}
-                    onAddTask={(title) => {
+                    onAddTask={() => {
                       setSelectedColumnForNewTask(column.id);
                       setTaskModalOpen(true);
                     }}
                     onUpdateTask={updateTask}
                     onDeleteTask={deleteTask}
+                    columns={Object.values(board.columns).map(c => ({ _id: c.id, title: c.title }))}
+                    members={members}
                     onRenameColumn={renameColumn}
                     onDeleteColumn={deleteColumn}
                     onOpenTask={openTask}
@@ -506,11 +609,7 @@ export default function BoardPage() {
             defaultColumnId={selectedColumnForNewTask}
             projectId={boardProjectId}
             columns={Object.values(board.columns).map(c => ({ _id: c.id, title: c.title }))}
-            members={[
-              { _id: "u-1", name: "Alex Morgan" },
-              { _id: "u-2", name: "Jamie Chen" },
-              { _id: "u-3", name: "Taylor Swift" }
-            ]}
+            members={members}
           />
           </div>
         </main>

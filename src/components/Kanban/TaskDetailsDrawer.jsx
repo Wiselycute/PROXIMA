@@ -1,6 +1,7 @@
 "use client";
-import { X, Clock, AlertCircle, CheckCircle, Users } from "lucide-react";
+import { X, Clock, AlertCircle, CheckCircle, Users, CheckCircle2 } from "lucide-react";
 import { useState } from "react";
+import Image from "next/image";
 
 export default function TaskDetailsDrawer({ open, onClose, task, comments, onAddComment }) {
   const [newComment, setNewComment] = useState("");
@@ -9,13 +10,37 @@ export default function TaskDetailsDrawer({ open, onClose, task, comments, onAdd
 
   const handleAdd = async () => {
     if (!newComment.trim()) return;
+    
+    // Get logged-in user
+    const user = JSON.parse(localStorage.getItem("user") || "{}");
+    if (!user.id) {
+      alert("Please sign in to add comments");
+      return;
+    }
+
+    // Validate taskId is a real MongoDB ObjectId (not temporary client ID)
+    const taskId = task._id || task.id;
+    if (!taskId || taskId.toString().startsWith("t-")) {
+      alert("Cannot add comment to unsaved task. Please save the task first.");
+      return;
+    }
+
     try {
       const api = (await import("@/lib/api")).default;
-      await api.post(`/comments`, { text: newComment, taskId: task._id || task.id });
+      await api.post(`/comments`, { 
+        text: newComment, 
+        taskId: taskId,
+        author: user.id 
+      });
       setNewComment("");
-      // Optionally reload comments or notify parent
+      
+      // Notify parent to reload comments
+      if (onAddComment) {
+        onAddComment(newComment);
+      }
     } catch (e) {
-      // Optionally show error toast
+      console.error("Failed to add comment:", e);
+      alert("Failed to add comment. Please try again.");
     }
   };
 
@@ -32,6 +57,8 @@ export default function TaskDetailsDrawer({ open, onClose, task, comments, onAdd
     }
   };
 
+  const isCompleted = task?.status === "completed";
+
   return (
     <div className="fixed inset-0 z-[400] flex">
 
@@ -44,7 +71,10 @@ export default function TaskDetailsDrawer({ open, onClose, task, comments, onAdd
         {/* Header */}
         <div className="flex justify-between items-start mb-6">
           <div className="flex-1">
-            <h2 className="text-xl font-semibold text-white">{task?.title}</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-xl font-semibold text-white">{task?.title}</h2>
+              {isCompleted && <CheckCircle2 size={20} className="text-green-500" />}
+            </div>
             <p className="text-sm text-white/50 mt-1">Task Details</p>
           </div>
           <button onClick={onClose} className="p-1 hover:bg-white/10 rounded transition">
@@ -78,11 +108,43 @@ export default function TaskDetailsDrawer({ open, onClose, task, comments, onAdd
               </div>
             )}
 
+            {/* Assignees with avatars */}
             {task?.assignees && task.assignees.length > 0 && (
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <Users size={16} className="text-white/50" />
+                  <span className="text-sm text-white/70 font-medium">
+                    Assigned to ({task.assignees.length})
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-2 pl-6">
+                  {task.assignees.map((assignee, i) => (
+                    <div key={i} className="flex items-center gap-2 bg-white/5 rounded-lg px-3 py-1.5 border border-white/10">
+                      <Image 
+                        src={assignee?.profileImage || assignee?.avatar || "/avatar.jpg"} 
+                        width={20}
+                        height={20}
+                        className="w-5 h-5 rounded-full object-cover" 
+                        alt={assignee?.name || "User"}
+                      />
+                      <span className="text-sm text-white/80">{assignee?.name || "User"}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Status */}
+            {task?.status && (
               <div className="flex items-center gap-3">
-                <Users size={16} className="text-white/50" />
-                <span className="text-sm text-white/70">
-                  {task.assignees.length} {task.assignees.length === 1 ? 'assignee' : 'assignees'}
+                <CheckCircle size={16} className="text-white/50" />
+                <span className={`text-sm px-3 py-1 rounded-lg border ${
+                  task.status === 'completed' ? 'bg-green-500/10 text-green-400 border-green-500/30' :
+                  task.status === 'in-progress' ? 'bg-blue-500/10 text-blue-400 border-blue-500/30' :
+                  'bg-gray-500/10 text-gray-400 border-gray-500/30'
+                }`}>
+                  {task.status === 'completed' ? 'Completed' : 
+                   task.status === 'in-progress' ? 'In Progress' : 'To Do'}
                 </span>
               </div>
             )}

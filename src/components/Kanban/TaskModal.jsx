@@ -2,13 +2,14 @@
 import React, { useRef, useState, useEffect } from "react";
 import Image from "next/image";
 import DeleteConfirmationModal from "./DeleteConfirmationModal";
+import { CheckCircle } from "lucide-react";
 
 /**
  * TaskModal provides:
  * - edit title/description
  * - comments (persist back via onUpdate)
  * - attach files (stored as object URLs)
- * - assignees (simple demo list)
+ * - assignees (from real users API)
  * - due date
  *
  * onUpdate receives a patch object that will be merged by parent.
@@ -113,13 +114,14 @@ export default function TaskModal({ task, onClose, onUpdate, onDelete, members }
           {/* assignees */}
           <div>
             <div className="text-sm font-medium mb-2">Assignees</div>
-            <div className="flex gap-2 items-center mb-2">
+            <div className="flex gap-2 flex-wrap">
               {userList.map((m) => {
-                const active = assignees.find((a) => a.id === m.id || a === m.id);
+                const active = assignees.some(a => (a.id || a._id || a) === (m.id || m._id));
                 return (
-                  <button key={m.id} onClick={() => toggleAssignee(m)} className={`flex items-center gap-2 p-2 rounded-md ${active ? "bg-white/6" : "bg-white/3"}`}>
-                    <Image src={m.avatar} width={28} height={28} className="rounded-full" alt={m.name} />
+                  <button key={m.id} onClick={() => toggleAssignee(m)} className={`flex items-center gap-2 p-2 rounded-md transition ${active ? "bg-blue-500/20 border border-blue-500/50" : "bg-white/3 border border-white/10 hover:bg-white/6"}`}>
+                    <Image src={m.avatar || "/avatar.jpg"} width={28} height={28} className="rounded-full w-7 h-7 object-cover" alt={m.name} />
                     <div className="text-sm">{m.name}</div>
+                    {active && <CheckCircle size={14} className="text-blue-400" />}
                   </button>
                 );
               })}
