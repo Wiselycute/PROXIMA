@@ -167,9 +167,9 @@ export default function DashboardPage() {
           label: (created.name || data.name).charAt(0).toUpperCase(),
           title: created.name || data.name,
           subtitle: created.description || data.description || "",
-          members: (created.members || []).length || 0,
-          status: created.status || "Active",
-          progress: created.progress || 0,
+          totalTasks: 0,
+          status: "Not Started",
+          progress: 0,
           color: ["bg-blue-500", "bg-purple-500", "bg-green-500"][Math.floor(Math.random() * 3)],
         },
       ]);
@@ -187,17 +187,57 @@ export default function DashboardPage() {
         const pj = pjRes.data || [];
         const tasks = tRes.data || [];
         const users = uRes.data || [];
-        setProjects(pj.map((p) => ({ id: p._id || p.id, label: (p.name || "P").charAt(0).toUpperCase(), title: p.name || p.title, subtitle: p.description || "", members: (p.members || []).length || 0, status: p.status || "Active", progress: p.progress || 0, color: "bg-indigo-500" })));
-        setStats({ tasks: tasks.length, teams: (pj.length || 0), completed: tasks.filter((t) => {
-          const colTitle = t?.columnId?.title || t?.column?.title || "";
-          return /done|completed/i.test(colTitle);
-        }).length, users: users.length });
+        
+        // Calculate stats based on task status
+        const completedCount = tasks.filter((t) => t.status === "completed").length;
+        const inProgressCount = tasks.filter((t) => t.status === "in-progress").length;
+        const todoCount = tasks.filter((t) => t.status === "todo" || !t.status).length;
+        
+        // Calculate completion status for each project
+        const projectsWithStatus = pj.map((p) => {
+          const projectId = p._id || p.id;
+          const projectTasks = tasks.filter(t => (t.projectId?._id || t.projectId) === projectId);
+          const totalTasks = projectTasks.length;
+          const completedTasks = projectTasks.filter(t => t.status === "completed").length;
+          const progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+          
+          // Determine status based on progress
+          let status = "Active";
+          if (progress === 100 && totalTasks > 0) {
+            status = "Completed";
+          } else if (progress === 0) {
+            status = "Not Started";
+          }
+          
+          return { 
+            id: projectId, 
+            label: (p.name || "P").charAt(0).toUpperCase(), 
+            title: p.name || p.title, 
+            subtitle: p.description || "", 
+            totalTasks: totalTasks, 
+            status: status, 
+            progress: progress, 
+            color: "bg-indigo-500" 
+          };
+        });
+        
+        setProjects(projectsWithStatus);
+        
+        setStats({ 
+          tasks: tasks.length, 
+          teams: (pj.length || 0), 
+          completed: completedCount, 
+          users: users.length,
+          inProgress: inProgressCount,
+          todo: todoCount
+        });
+        
         setAllTasks(tasks);
       } catch (err) {
         console.warn("Dashboard data load failed, using defaults", err);
         // fallback minimal defaults
         setProjects([]);
-        setStats({ tasks: 0, teams: 0, completed: 0, users: 0 });
+        setStats({ tasks: 0, teams: 0, completed: 0, users: 0, inProgress: 0, todo: 0 });
       }
     }
     load();
@@ -229,8 +269,7 @@ export default function DashboardPage() {
     const diffMonths = (new Date().getFullYear() - created.getFullYear()) * 12 + (new Date().getMonth() - created.getMonth());
     const idx = 11 - Math.min(11, Math.max(0, diffMonths));
 
-    const colTitle = t?.columnId?.title || t?.column?.title || "";
-    const isDone = /done|completed/i.test(colTitle);
+    const isDone = t.status === "completed";
     if (isDone) completedSeries[idx] += 1; else inprogressSeries[idx] += 1;
   });
 
@@ -256,18 +295,19 @@ export default function DashboardPage() {
     ],
   };
 
-  // donut: breakdown by column title
-  const colCounts = {};
-  allTasks.forEach((t) => {
-    const title = (t?.columnId?.title || t?.column?.title || "Unassigned").trim();
-    colCounts[title] = (colCounts[title] || 0) + 1;
-  });
-  const donutLabels = Object.keys(colCounts).length ? Object.keys(colCounts) : ["To Do", "In Progress", "Done"];
-  const donutValues = donutLabels.map((l) => colCounts[l] || 0);
-  const palette = ["#F4A261", "#4A90E2", "#2ECC71", "#C9B7ED", "#9B72CF", "#5A62EA"];
+  // donut: breakdown by status
+  const statusCounts = {
+    "To Do": allTasks.filter(t => t.status === "todo" || !t.status).length,
+    "In Progress": allTasks.filter(t => t.status === "in-progress").length,
+    "Done": allTasks.filter(t => t.status === "completed").length
+  };
+  
+  const donutLabels = Object.keys(statusCounts);
+  const donutValues = Object.values(statusCounts);
+  const palette = ["#F4A261", "#4A90E2", "#2ECC71"];
   const donutData = {
     labels: donutLabels,
-    datasets: [{ data: donutValues, backgroundColor: donutLabels.map((_, i) => palette[i % palette.length]), borderWidth: 0 }],
+    datasets: [{ data: donutValues, backgroundColor: palette, borderWidth: 0 }],
   };
 
   return (
@@ -361,9 +401,9 @@ export default function DashboardPage() {
           </div>
 
           <div className="flex justify-between mt-6 text-sm text-gray-300">
-            <Status label="To Do" value={2} color="#F4A261" />
-            <Status label="In Progress" value={2} color="#4A90E2" />
-            <Status label="Done" value={2} color="#2ECC71" />
+            <Status label="To Do" value={statusCounts["To Do"]} color="#F4A261" />
+            <Status label="In Progress" value={statusCounts["In Progress"]} color="#4A90E2" />
+            <Status label="Done" value={statusCounts["Done"]} color="#2ECC71" />
           </div>
         </div>
         
@@ -376,7 +416,7 @@ export default function DashboardPage() {
             label={p.label}
             title={p.title}
             subtitle={p.subtitle}
-            members={p.members}
+            totalTasks={p.totalTasks}
             status={p.status}
             progress={p.progress}
             color={p.color}
@@ -403,12 +443,13 @@ export default function DashboardPage() {
 /* ---------------------
    PROJECT CARD
 ---------------------- */
-function ProjectCard({ label, title, subtitle, members, status, progress, color }) {
+function ProjectCard({ label, title, subtitle, totalTasks, status, progress, color }) {
   const statusColor = {
     Active: "text-green-400",
     Completed: "text-blue-400",
+    "Not Started": "text-gray-400",
     "On-hold": "text-yellow-400",
-  }[status];
+  }[status] || "text-green-400";
 
   return (
     <div className="bg-[var(--background)] p-5 rounded-xl border border-gray-700 hover:border-indigo-500/50 transition">
@@ -423,7 +464,7 @@ function ProjectCard({ label, title, subtitle, members, status, progress, color 
       <p className="text-gray-400 text-sm">{subtitle}</p>
 
       <div className="flex items-center justify-between mt-4 text-gray-400 text-xs">
-        <span>{members} members</span>
+        <span>{totalTasks || 0} {totalTasks === 1 ? 'task' : 'tasks'}</span>
         <span>{progress}% complete</span>
       </div>
 
