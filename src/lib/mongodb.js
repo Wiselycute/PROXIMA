@@ -1,14 +1,15 @@
 import mongoose from "mongoose";
 
-const MONGO_URI = process.env.MONGO_DB;
-
-if (!MONGO_URI) {
-  throw new Error(" MONGO_DB environment variable is missing ");
-}
-
 let isConnected = false;
 
 export const connectDB = async () => {
+  const MONGO_URI = process.env.MONGO_DB;
+
+  if (!MONGO_URI) {
+    console.error("❌ MONGO_DB environment variable is missing");
+    throw new Error("MONGO_DB environment variable is missing");
+  }
+
   if (isConnected) {
     console.log("✅ MongoDB Already Connected");
     return;
