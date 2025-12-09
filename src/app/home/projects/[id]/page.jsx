@@ -22,6 +22,8 @@ import {
 import Column from "@/components/Kanban/Column";
 import AddTaskModal from "@/components/Kanban/AddTaskModal";
 import ProjectProgress from "@/components/ProjectProgress";
+import TaskDetailsDrawer from "@/components/Kanban/TaskDetailsDrawer";
+import EditTaskModal from "@/components/Kanban/EditTaskModal";
 
 export default function ProjectDetailPage() {
   const params = useParams();
@@ -37,6 +39,10 @@ export default function ProjectDetailPage() {
   const [selectedColumnForNewTask, setSelectedColumnForNewTask] = useState("todo");
   const [progressRefresh, setProgressRefresh] = useState(0);
   const [members, setMembers] = useState([]);
+  const [showDetails, setShowDetails] = useState(false);
+  const [selectedTask, setSelectedTask] = useState(null);
+  const [showEdit, setShowEdit] = useState(false);
+  const [taskToEdit, setTaskToEdit] = useState(null);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
@@ -501,6 +507,14 @@ export default function ProjectDetailPage() {
                           }}
                           onUpdateTask={updateTask}
                           onDeleteTask={deleteTask}
+                          onTaskClick={(task) => {
+                            setSelectedTask(task);
+                            setShowDetails(true);
+                          }}
+                          onEditTask={(task) => {
+                            setTaskToEdit(task);
+                            setShowEdit(true);
+                          }}
                           columns={Object.values(board.columns).filter(c => c && c.id && c.title).map(c => ({ _id: c.id, title: c.title }))}
                           members={members}
                           onRenameColumn={(colId, newName) => {
@@ -572,6 +586,46 @@ export default function ProjectDetailPage() {
         </main>
       </div>
 
+      {/* Task Details Drawer - shows comments and read-only info */}
+      <TaskDetailsDrawer
+        open={showDetails}
+        onClose={() => {
+          setShowDetails(false);
+          setSelectedTask(null);
+        }}
+        task={selectedTask}
+        comments={selectedTask?.comments || []}
+        onAddComment={async (text) => {
+          if (!selectedTask) return;
+          
+          // Reload task from API to get updated comments
+          try {
+            const taskId = selectedTask._id || selectedTask.id;
+            if (taskId && !taskId.toString().startsWith("t-")) {
+              const { data } = await api.get(`/tasks/${taskId}`);
+              // Update both local state and selected task
+              setSelectedTask({
+                ...selectedTask,
+                comments: data.comments || []
+              });
+              // Also update in board
+              setBoard(prev => ({
+                ...prev,
+                tasks: {
+                  ...prev.tasks,
+                  [taskId]: {
+                    ...prev.tasks[taskId],
+                    comments: data.comments || []
+                  }
+                }
+              }));
+            }
+          } catch (e) {
+            console.error("Failed to reload task comments:", e);
+          }
+        }}
+      />
+
       <AddTaskModal
         open={taskModalOpen}
         onClose={() => setTaskModalOpen(false)}
@@ -582,6 +636,27 @@ export default function ProjectDetailPage() {
           .filter(c => c && c.id && c.title)
           .map(c => ({ _id: c.id, title: c.title }))}
         members={members}
+      />
+
+      {/* Edit Task Modal */}
+      <EditTaskModal
+        open={showEdit}
+        onClose={() => {
+          setShowEdit(false);
+          setTaskToEdit(null);
+        }}
+        task={taskToEdit}
+        columns={Object.values(board.columns)
+          .filter(c => c && c.id && c.title)
+          .map(c => ({ _id: c.id, title: c.title }))}
+        members={members}
+        onSave={(updated) => {
+          if (taskToEdit) {
+            updateTask(taskToEdit.id, updated);
+          }
+          setShowEdit(false);
+          setTaskToEdit(null);
+        }}
       />
     </div>
   );

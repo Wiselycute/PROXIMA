@@ -4,8 +4,6 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Edit, MessageSquare, CheckCircle2, Circle, Clock, TrendingUp, Trash2 } from "lucide-react";
 import TaskModal from "./TaskModal";
-import TaskDetailsDrawer from "./TaskDetailsDrawer";
-import EditTaskModal from "./EditTaskModal";
 import DeleteConfirmationModal from "./DeleteConfirmationModal";
 import Image from "next/image";
 
@@ -17,15 +15,13 @@ import Image from "next/image";
  * Status can be changed via dropdown.
  */
 
-export default function TaskCard({ task, index, onUpdate, onDelete, columns = [], members = [] }) {
+export default function TaskCard({ task, index, onUpdate, onDelete, onClick, onEdit, columns = [], members = [] }) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: task.id });
   const style = {
     transform: CSS.Transform.toString(transform),
     transition
   };
 
-  const [showDetails, setShowDetails] = useState(false);
-  const [showEdit, setShowEdit] = useState(false);
   const [open, setOpen] = useState(false);
   const [showStatusMenu, setShowStatusMenu] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -121,7 +117,7 @@ export default function TaskCard({ task, index, onUpdate, onDelete, columns = []
         {...attributes}
         {...listeners}
         className={`group relative bg-[var(--background)] p-4 rounded-xl cursor-grab hover:cursor-grab border border-white/10 hover:border-white/20 transition-all hover:shadow-xl hover:scale-[1.02] ${isCompleted ? 'opacity-60' : ''}`}
-        onClick={() => setShowDetails(true)}
+        onClick={() => onClick?.(task)}
       >
         {/* Priority Indicator Strip */}
         <div className={`absolute top-0 left-0 right-0 h-1 rounded-t-xl ${
@@ -247,7 +243,7 @@ export default function TaskCard({ task, index, onUpdate, onDelete, columns = []
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                setShowEdit(true);
+                onEdit?.();
               }}
               className="p-2 hover:bg-white/10 rounded-lg transition-all hover:scale-110"
               title="Edit task"
@@ -269,7 +265,7 @@ export default function TaskCard({ task, index, onUpdate, onDelete, columns = []
       </div>
 
       {/* Task Details Drawer - shows comments and read-only info */}
-      <TaskDetailsDrawer
+      {/* <TaskDetailsDrawer
         open={showDetails}
         onClose={() => setShowDetails(false)}
         task={task}
@@ -296,20 +292,7 @@ export default function TaskCard({ task, index, onUpdate, onDelete, columns = []
             console.error("Failed to reload task comments:", e);
           }
         }}
-      />
-
-      {/* Edit Task Modal */}
-      <EditTaskModal
-        open={showEdit}
-        onClose={() => setShowEdit(false)}
-        task={task}
-        columns={columns}
-        members={members}
-        onSave={(updated) => {
-          onUpdate(updated);
-          setShowEdit(false);
-        }}
-      />
+      /> */}
 
       {/* Delete Confirmation Modal */}
       <DeleteConfirmationModal

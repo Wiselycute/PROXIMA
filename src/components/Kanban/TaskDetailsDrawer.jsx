@@ -120,7 +120,7 @@ export default function TaskDetailsDrawer({ open, onClose, task, comments: initi
           {/* Description */}
           <div>
             <h3 className="text-sm font-medium text-white/70 mb-2">Description</h3>
-            <p className="text-white/60 text-sm leading-relaxed">{task?.description || "No description provided."}</p>
+            <p className="text-white/60 text-sm leading-relaxed">{task?.desc || task?.description || "No description provided."}</p>
           </div>
 
           {/* Task Info */}

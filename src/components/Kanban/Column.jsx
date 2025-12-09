@@ -55,7 +55,7 @@ const getColumnStyle = (title) => {
   };
 };
 
-export default function Column({ column, tasks = [], onAddTask, onUpdateTask, onDeleteTask, onRenameColumn, onDeleteColumn, columns = [], members = [] }) {
+export default function Column({ column, tasks = [], onAddTask, onUpdateTask, onDeleteTask, onTaskClick, onEditTask, onRenameColumn, onDeleteColumn, columns = [], members = [] }) {
   const [showSettings, setShowSettings] = useState(false);
   const columnStyle = getColumnStyle(column.title);
 
@@ -95,6 +95,8 @@ export default function Column({ column, tasks = [], onAddTask, onUpdateTask, on
             index={idx} 
             onUpdate={(patch) => onUpdateTask(task.id, patch)} 
             onDelete={() => onDeleteTask(task.id)} 
+            onClick={() => onTaskClick?.(task)}
+            onEdit={() => onEditTask?.(task)}
             columns={columns} 
             members={members} 
           />
