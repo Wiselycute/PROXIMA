@@ -45,6 +45,7 @@ export const POST = async (request) => {
         name: user.name,
         email: user.email,
         profileImage: user.profileImage,
+        role: user.role || "member", // Include role in response
       },
     });
 

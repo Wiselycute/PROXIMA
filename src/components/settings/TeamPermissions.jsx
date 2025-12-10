@@ -5,6 +5,7 @@ import RoleDropdown from "./RoleDropdown";
 import { useToast } from "@/components/ui/ToastProvider";
 import  Link  from 'next/link';
 import api from "@/lib/api";
+import { isAdmin } from "@/lib/auth";
 
 /* mock members */
 const MOCK = [
@@ -14,6 +15,7 @@ const MOCK = [
 ];
 
 export default function TeamPermissions() {
+  const [currentUserIsAdmin, setCurrentUserIsAdmin] = useState(false);
   const [members, setMembers] = useState(() => {
     // try load from localStorage
     try {
@@ -21,6 +23,10 @@ export default function TeamPermissions() {
       return raw ? JSON.parse(raw) : MOCK;
     } catch { return MOCK; }
   });
+
+  useEffect(() => {
+    setCurrentUserIsAdmin(isAdmin());
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -78,7 +84,13 @@ export default function TeamPermissions() {
             {members.map((member) => (
               <div key={member.id} className="flex items-center justify-between p-3 bg-white/3 rounded">
                 <div className="flex items-center gap-3">
-                  <Image src={member.avatar} width={48} height={48} className="rounded-full" alt={member.name} />
+                  <Image 
+                    src={member.avatar} 
+                    width={48} 
+                    height={48} 
+                    className="rounded-full w-12 h-12 object-cover" 
+                    alt={member.name} 
+                  />
                   <div>
                     <div className="font-medium">{member.name}</div>
                     <div className="text-xs opacity-70">{member.email}</div>
@@ -86,7 +98,11 @@ export default function TeamPermissions() {
                 </div>
 
                 <div>
-                  <RoleDropdown value={member.role} onChange={(role) => changeRole(member.id, role)} />
+                  <RoleDropdown 
+                    value={member.role} 
+                    onChange={(role) => changeRole(member.id, role)} 
+                    currentUserIsAdmin={currentUserIsAdmin}
+                  />
                 </div>
               </div>
             ))}

@@ -18,6 +18,7 @@ import Sidebar from "@/components/Sidebar";
 import Topbar from "@/components/Topbar";
 import AddProjectModal from "@/components/Kanban/AddProjectModal";
 import api from "@/lib/api";
+import { isAdmin } from "@/lib/auth";
 import { motion } from 'framer-motion';
 
 ChartJS.register(
@@ -57,6 +58,7 @@ export default function DashboardPage() {
   const [stats, setStats] = useState({ tasks: 0, teams: 0, completed: 0, users: 0 });
   const [allTasks, setAllTasks] = useState([]);
   const [user, setUser] = useState(null);
+  const [userIsAdmin, setUserIsAdmin] = useState(false);
 
   // Load user from localStorage
   useEffect(() => {
@@ -64,6 +66,7 @@ export default function DashboardPage() {
     if (storedUser) {
       setUser(JSON.parse(storedUser));
     }
+    setUserIsAdmin(isAdmin());
   }, []);
 
   const handleAddProject = async (data) => {
@@ -249,9 +252,11 @@ export default function DashboardPage() {
             />
           </div>
 
-          <button onClick={() => setShowAddProjectModal(true)} className="bg-[#5A62EA] hover:bg-[#7077FF] transition px-4 py-2 rounded-lg flex items-center gap-2 text-white text-sm w-full sm:w-auto">
-            <Plus size={16} /> New Project
-          </button>
+          {userIsAdmin && (
+            <button onClick={() => setShowAddProjectModal(true)} className="bg-[#5A62EA] hover:bg-[#7077FF] transition px-4 py-2 rounded-lg flex items-center gap-2 text-white text-sm w-full sm:w-auto">
+              <Plus size={16} /> New Project
+            </button>
+          )}
         </div>
       </div>
 

@@ -335,6 +335,7 @@ import AddProjectModal from "@/components/Kanban/AddProjectModal";
 import DeleteConfirmationModal from "@/components/Kanban/DeleteConfirmationModal";
 import { Button } from "@/components/ui/button";
 import { Plus, Trash2 } from "lucide-react";
+import { isAdmin } from "@/lib/auth";
 
 const SAMPLE = [];
 
@@ -344,6 +345,16 @@ export default function ProjectListPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [selectedProject, setSelectedProject] = useState(null);
   const [allTasks, setAllTasks] = useState([]);
+  const [userIsAdmin, setUserIsAdmin] = useState(false);
+
+  useEffect(() => {
+    setUserIsAdmin(isAdmin());
+  }, []);
+  // const [userIsAdmin, setUserIsAdmin] = useState(false);
+
+  // useEffect(() => {
+  //   setUserIsAdmin(isAdmin());
+  // }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -443,9 +454,11 @@ export default function ProjectListPage() {
         rightSlot={
           <div className="flex gap-2">
             <Link href="/home/board" className="px-4 py-2 rounded-xl bg-[#9B72CF] text-white inline-block">Open Board</Link>
-            <Button onClick={() => setShowAddProjectModal(true)} className="rounded-xl flex items-center gap-2">
-              <Plus size={16} /> New Project
-            </Button>
+            {userIsAdmin && (
+              <Button onClick={() => setShowAddProjectModal(true)} className="rounded-xl flex items-center gap-2">
+                <Plus size={16} /> New Project
+              </Button>
+            )}
           </div>
         }
       />
@@ -489,17 +502,19 @@ export default function ProjectListPage() {
                 </div>
               </Link>
               
-              <button
-                onClick={(e) => {
-                  e.preventDefault();
-                  setSelectedProject(p);
-                  setShowDeleteConfirm(true);
-                }}
-                className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 p-2 hover:bg-red-500/20 rounded-lg transition"
-                title="Delete project"
-              >
-                <Trash2 size={16} className="text-red-400" />
-              </button>
+              {userIsAdmin && (
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setSelectedProject(p);
+                    setShowDeleteConfirm(true);
+                  }}
+                  className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 p-2 hover:bg-red-500/20 rounded-lg transition"
+                  title="Delete project"
+                >
+                  <Trash2 size={16} className="text-red-400" />
+                </button>
+              )}
             </div>
           );
         })}

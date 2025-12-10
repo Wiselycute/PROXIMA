@@ -55,7 +55,7 @@ const getColumnStyle = (title) => {
   };
 };
 
-export default function Column({ column, tasks = [], onAddTask, onUpdateTask, onDeleteTask, onTaskClick, onEditTask, onRenameColumn, onDeleteColumn, columns = [], members = [] }) {
+export default function Column({ column, tasks = [], onAddTask, onUpdateTask, onDeleteTask, onTaskClick, onEditTask, onRenameColumn, onDeleteColumn, columns = [], members = [], userIsAdmin = false }) {
   const [showSettings, setShowSettings] = useState(false);
   const columnStyle = getColumnStyle(column.title);
 
@@ -104,15 +104,17 @@ export default function Column({ column, tasks = [], onAddTask, onUpdateTask, on
       </div>
 
       {/* Add Task Button */}
-      <button
-        className="w-full px-4 py-3 rounded-xl bg-primary hover:bg-primary/90 text-white font-medium hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2 group"
-        onClick={() => {
-          onAddTask();
-        }}
-      >
-        <Plus size={18} className="group-hover:rotate-90 transition-transform duration-200" />
-        <span>Add Task</span>
-      </button>
+      {userIsAdmin && (
+        <button
+          className="w-full px-4 py-3 rounded-xl bg-primary hover:bg-primary/90 text-white font-medium hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2 group"
+          onClick={() => {
+            onAddTask();
+          }}
+        >
+          <Plus size={18} className="group-hover:rotate-90 transition-transform duration-200" />
+          <span>Add Task</span>
+        </button>
+      )}
 
       <ColumnSettingsModal
         open={showSettings}

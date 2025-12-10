@@ -8,6 +8,7 @@ import Sidebar from "@/components/Sidebar";
 import Topbar from "@/components/Topbar";
 import { useParams } from "next/navigation";
 import api from "@/lib/api";
+import { isAdmin } from "@/lib/auth";
 import {
   DndContext,
   PointerSensor,
@@ -43,6 +44,11 @@ export default function ProjectDetailPage() {
   const [selectedTask, setSelectedTask] = useState(null);
   const [showEdit, setShowEdit] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState(null);
+  const [userIsAdmin, setUserIsAdmin] = useState(false);
+
+  useEffect(() => {
+    setUserIsAdmin(isAdmin());
+  }, []);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
@@ -382,15 +388,17 @@ export default function ProjectDetailPage() {
                     <p className="text-gray-400 mt-1">{project?.description || "No description"}</p>
                   </div>
                 </div>
-                <Button
-                  onClick={() => {
-                    setSelectedColumnForNewTask(board.columnOrder[0] || "todo");
-                    setTaskModalOpen(true);
-                  }}
-                  className="bg-purple-600 hover:bg-purple-700 text-white rounded-lg px-6 py-2"
-                >
-                  <Plus size={18} /> <span className="ml-2">New Task</span>
-                </Button>
+                {userIsAdmin && (
+                  <Button
+                    onClick={() => {
+                      setSelectedColumnForNewTask(board.columnOrder[0] || "todo");
+                      setTaskModalOpen(true);
+                    }}
+                    className="bg-purple-600 hover:bg-purple-700 text-white rounded-lg px-6 py-2"
+                  >
+                    <Plus size={18} /> <span className="ml-2">New Task</span>
+                  </Button>
+                )}
               </div>
 
               {/* Quick Stats Row */}
@@ -517,6 +525,7 @@ export default function ProjectDetailPage() {
                           }}
                           columns={Object.values(board.columns).filter(c => c && c.id && c.title).map(c => ({ _id: c.id, title: c.title }))}
                           members={members}
+                          userIsAdmin={userIsAdmin}
                           onRenameColumn={(colId, newName) => {
                             setBoard((prev) => {
                               const targetCol = prev.columns[colId];
