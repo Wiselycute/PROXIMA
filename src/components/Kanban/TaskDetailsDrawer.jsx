@@ -1,5 +1,5 @@
 "use client";
-import { X, Clock, AlertCircle, CheckCircle, Users, CheckCircle2 } from "lucide-react";
+import { X, Clock, AlertCircle, CheckCircle, Users, CheckCircle2, Trash2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import Image from "next/image";
 
@@ -74,6 +74,39 @@ export default function TaskDetailsDrawer({ open, onClose, task, comments: initi
     } catch (e) {
       console.error("Failed to add comment:", e);
       alert("Failed to add comment. Please try again.");
+    }
+  };
+
+  const handleDeleteComment = async (commentId, authorId) => {
+    // Get logged-in user
+    const user = JSON.parse(localStorage.getItem("user") || "{}");
+    
+    // Check if user is the author
+    if (user.id !== authorId?.toString()) {
+      alert("You can only delete your own comments");
+      return;
+    }
+
+    if (!confirm("Are you sure you want to delete this comment?")) {
+      return;
+    }
+
+    try {
+      const api = (await import("@/lib/api")).default;
+      await api.delete(`/comments/${commentId}?userId=${user.id}`);
+      
+      // Reload comments after deletion
+      const taskId = task._id || task.id;
+      const { data } = await api.get(`/tasks/${taskId}`);
+      setComments(data.comments || []);
+      
+      // Notify parent to reload comments
+      if (onAddComment) {
+        onAddComment("");
+      }
+    } catch (e) {
+      console.error("Failed to delete comment:", e);
+      alert("Failed to delete comment. Please try again.");
     }
   };
 
@@ -189,14 +222,35 @@ export default function TaskDetailsDrawer({ open, onClose, task, comments: initi
 
             <div className="space-y-3 max-h-[200px] overflow-y-auto">
               {comments && comments.length > 0 ? (
-                comments.map(c => (
-                  <div key={c._id || c.id} className="bg-white/5 p-3 rounded-xl border border-white/10 hover:border-white/20 transition">
-                    <p className="text-sm text-white">{c.text}</p>
-                    <p className="text-xs text-white/40 mt-2">
-                      {c.createdAt ? new Date(c.createdAt).toLocaleString() : 'Just now'}
-                    </p>
-                  </div>
-                ))
+                comments.map(c => {
+                  const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+                  const isAuthor = currentUser.id && (c.author?._id === currentUser.id || c.author === currentUser.id);
+                  
+                  return (
+                    <div key={c._id || c.id} className="bg-white/5 p-3 rounded-xl border border-white/10 hover:border-white/20 transition group">
+                      <div className="flex justify-between items-start gap-2">
+                        <div className="flex-1">
+                          <p className="text-sm text-white">{c.text}</p>
+                          <div className="flex items-center justify-between mt-2">
+                            <p className="text-xs text-white/40">
+                              {c.author?.name && <span className="font-medium">{c.author.name} • </span>}
+                              {c.createdAt ? new Date(c.createdAt).toLocaleString() : 'Just now'}
+                            </p>
+                          </div>
+                        </div>
+                        {isAuthor && (
+                          <button
+                            onClick={() => handleDeleteComment(c._id || c.id, c.author?._id || c.author)}
+                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 hover:bg-red-500/20 rounded-lg text-red-400 hover:text-red-300"
+                            title="Delete comment"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
               ) : (
                 <p className="text-sm text-white/50 text-center py-4">No comments yet</p>
               )}

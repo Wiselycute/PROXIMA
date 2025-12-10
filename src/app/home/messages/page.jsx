@@ -224,7 +224,7 @@ export default function ChatPage() {
      <div className="min-h-screen bg-[var(--background)] flex  text-[var(--foreground)] ">
           <Sidebar />
           <div className="flex-1 bg-[var(--background)]">
-            <Topbar />
+            {/* <Topbar /> */}
     <div className="flex h-screen overflow-hidden scrollbar-hide  bg-[var(--background)] ">
 
       {/* Mobile Top Bar */}

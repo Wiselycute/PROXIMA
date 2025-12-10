@@ -40,8 +40,8 @@ export default function Sidebar() {
     { name: "Dashboard", href: "/home/dashboard", icon: Grid },
     { name: "Projects", href: "/home/projects", icon: Folder },
     { name: "Team", href: "/home/members", icon: Users },
-    { name: "Files", href: "/home/files", icon: FileText },
     { name: "Messages", href: "/home/messages", icon: MessageCircleMore },
+    { name: "Files", href: "/home/files", icon: FileText },
     { name: "Settings", href: "/home/settings/profile", icon: Settings },
   ];
 

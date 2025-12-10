@@ -258,7 +258,7 @@ export default function FilesPage() {
     <div className="min-h-screen flex bg-[var(--background)] text-[var(--foreground)]"> 
       <Sidebar />
       <div className="flex-1">   
-        <Topbar />
+        {/* <Topbar /> */}
         <main className="p-8">
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-2xl font-semibold">Files</h1>

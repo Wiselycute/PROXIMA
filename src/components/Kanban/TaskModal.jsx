@@ -2,7 +2,7 @@
 import React, { useRef, useState, useEffect } from "react";
 import Image from "next/image";
 import DeleteConfirmationModal from "./DeleteConfirmationModal";
-import { CheckCircle } from "lucide-react";
+import { CheckCircle, Trash2 } from "lucide-react";
 
 /**
  * TaskModal provides:
@@ -76,6 +76,13 @@ export default function TaskModal({ task, onClose, onUpdate, onDelete, members }
     const next = [...comments, c];
     setComments(next);
     setNewComment("");
+  }
+
+  function handleDeleteComment(commentId) {
+    if (!confirm("Are you sure you want to delete this comment?")) {
+      return;
+    }
+    setComments((prev) => prev.filter(c => c.id !== commentId));
   }
 
   function handleFiles(e) {
@@ -157,9 +164,18 @@ export default function TaskModal({ task, onClose, onUpdate, onDelete, members }
             <div className="space-y-2 max-h-40 overflow-y-auto p-2 bg-white/3 rounded-md">
               {comments.length === 0 && <div className="opacity-60 text-sm">No comments yet</div>}
               {comments.map((c) => (
-                <div key={c.id} className="text-sm">
-                  <div className="font-semibold">{c.author} <span className="text-xs opacity-60 ml-2">{new Date(c.time).toLocaleString()}</span></div>
-                  <div className="opacity-80">{c.text}</div>
+                <div key={c.id} className="text-sm group flex justify-between items-start gap-2">
+                  <div className="flex-1">
+                    <div className="font-semibold">{c.author} <span className="text-xs opacity-60 ml-2">{new Date(c.time).toLocaleString()}</span></div>
+                    <div className="opacity-80">{c.text}</div>
+                  </div>
+                  <button
+                    onClick={() => handleDeleteComment(c.id)}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-red-500/20 rounded text-red-400 hover:text-red-300"
+                    title="Delete comment"
+                  >
+                    <Trash2 size={14} />
+                  </button>
                 </div>
               ))}
             </div>

@@ -364,7 +364,7 @@ export default function ProjectDetailPage() {
     <div className="min-h-screen flex bg-[var(--background)] text-foreground">
       <Sidebar />
       <div className="flex-1 overflow-hidden bg-[var(--background)]">
-        <Topbar />
+        {/* <Topbar /> */}
         <main className="h-[calc(100vh-4rem)] overflow-y-auto">
           <div className="max-w-[1800px] mx-auto p-6 lg:p-8 space-y-6">
             

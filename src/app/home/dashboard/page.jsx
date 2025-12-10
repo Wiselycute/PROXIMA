@@ -227,7 +227,7 @@ export default function DashboardPage() {
     <div className="min-h-screen  flex bg-[var(--background)] text-[var(--foreground)]">
       <Sidebar />
       <div className="flex-1">
-        <Topbar />
+        {/* <Topbar /> */}
 
       {/* Header */}
       <div className="flex flex-col bg-[var(--background)] sticky top-0 z-10 sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -235,11 +235,11 @@ export default function DashboardPage() {
           <h1 className="text-xl sm:text-2xl font-semibold text-white p-4">
             Dashboard
           </h1>
-          {user && (
+          {/* {user && (
             <p className="text-sm text-gray-400 px-4">
               Welcome back, <span className="font-semibold text-white">{user.name}</span>
             </p>
-          )}
+          )} */}
         </div>
 
         <div className="flex bg-[var(--background)] flex-col sm:flex-row gap-3  sm:items-center">

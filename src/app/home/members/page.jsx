@@ -54,7 +54,7 @@ export default function MembersPage(){
     <div className="min-h-screen bg-[var(--background)] flex  text-[var(--foreground)]">
       <Sidebar />
       <div className="flex-1 bg-[var(--background)]">
-        <Topbar />
+        {/* <Topbar /> */}
         <main className="flex-1 p-8 overflow-auto bg-[var(--background)] transition-colors duration-300">
         <header className="flex items-center justify-between mb-6">
           <div>

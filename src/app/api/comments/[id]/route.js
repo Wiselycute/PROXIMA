@@ -33,8 +33,21 @@ export async function DELETE(request, context) {
   const params = await context.params;
   try {
     await connectDB();
-    const doc = await Comment.findByIdAndDelete(params.id);
-    if (!doc) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    
+    // Find the comment first
+    const comment = await Comment.findById(params.id);
+    if (!comment) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    
+    // Get userId from request (you can enhance this with proper auth middleware)
+    const url = new URL(request.url);
+    const userId = url.searchParams.get('userId');
+    
+    // Check if the user is the author of the comment
+    if (userId && comment.author && comment.author.toString() !== userId) {
+      return NextResponse.json({ error: "Unauthorized: You can only delete your own comments" }, { status: 403 });
+    }
+    
+    await Comment.findByIdAndDelete(params.id);
     return NextResponse.json({ message: "Comment deleted" });
   } catch (err) {
     console.error("DELETE /api/comments/[id]", err);

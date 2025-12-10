@@ -33,7 +33,7 @@ export default function ProfileSettings() {
     <div className="min-h-screen flex bg-[var(--background)]">
           <Sidebar />
           <div className="flex-1 bg-[var(--background)]">
-            <Topbar    />
+            {/* <Topbar    /> */}
     <section className="max-w-5xl mx-auto bg-[var(--background)] ">
       {/* ----------- PAGE TITLE ----------- */}
       <h2 className="text-2xl font-bold mb-4">Profile Settings</h2>

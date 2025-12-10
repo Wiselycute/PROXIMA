@@ -30,7 +30,7 @@ export default function Page() {
     <div className="min-h-screen flex bg-[var(--background)] text-[var(--foreground)]">
       <Sidebar />
       <div className="flex-1">
-        <Topbar />
+        {/* <Topbar /> */}
         <main className="p-8">
           <TeamPermissions />
         </main>

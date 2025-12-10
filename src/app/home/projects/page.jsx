@@ -446,7 +446,7 @@ export default function ProjectListPage() {
     <div className="min-h-screen flex bg-[var(--background)] text-[var(--foreground)]">
       <Sidebar />
       <div className="flex-1">
-        <Topbar />
+        {/* <Topbar /> */}
         <div className="p-6">
       <NeonAnimatedHeader
         title="Projects"
