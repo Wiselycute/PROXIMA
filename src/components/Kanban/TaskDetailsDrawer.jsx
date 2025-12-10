@@ -116,7 +116,7 @@ export default function TaskDetailsDrawer({ open, onClose, task, comments: initi
         </div>
 
         {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto space-y-6">
+        <div className="flex-1 overflow-y-auto scrollbar-hide space-y-6">
           {/* Description */}
           <div>
             <h3 className="text-sm font-medium text-white/70 mb-2">Description</h3>

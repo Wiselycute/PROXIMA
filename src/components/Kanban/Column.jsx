@@ -98,7 +98,8 @@ export default function Column({ column, tasks = [], onAddTask, onUpdateTask, on
             onClick={() => onTaskClick?.(task)}
             onEdit={() => onEditTask?.(task)}
             columns={columns} 
-            members={members} 
+            members={members}
+            userIsAdmin={userIsAdmin} 
           />
         ))}
       </div>

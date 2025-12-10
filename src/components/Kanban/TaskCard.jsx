@@ -15,7 +15,7 @@ import Image from "next/image";
  * Status can be changed via dropdown.
  */
 
-export default function TaskCard({ task, index, onUpdate, onDelete, onClick, onEdit, columns = [], members = [] }) {
+export default function TaskCard({ task, index, onUpdate, onDelete, onClick, onEdit, columns = [], members = [], userIsAdmin = false }) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: task.id });
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -28,6 +28,13 @@ export default function TaskCard({ task, index, onUpdate, onDelete, onClick, onE
   const statusMenuRef = useRef(null);
 
   const isCompleted = task.status === "completed";
+  
+  // Check if current user can change status (admin or assigned user)
+  const user = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("user") || "{}") : {};
+  const isAssigned = task.assignees?.some(assignee => 
+    (assignee._id || assignee.id) === user.id
+  );
+  const canChangeStatus = userIsAdmin || isAssigned;
 
   // Close status menu when clicking outside
   useEffect(() => {
@@ -46,6 +53,15 @@ export default function TaskCard({ task, index, onUpdate, onDelete, onClick, onE
   const handleToggleComplete = async (e) => {
     e.stopPropagation();
     const user = JSON.parse(localStorage.getItem("user") || "{}");
+    
+    // Check if user is admin or assigned to this task
+    const isAssigned = task.assignees?.some(assignee => 
+      (assignee._id || assignee.id) === user.id
+    );
+    
+    if (!userIsAdmin && !isAssigned) {
+      return; // User is not authorized to change status
+    }
     
     // Cycle through statuses: todo -> in-progress -> completed -> todo
     let newStatus;
@@ -67,6 +83,15 @@ export default function TaskCard({ task, index, onUpdate, onDelete, onClick, onE
   const handleStatusChange = (e, newStatus) => {
     e.stopPropagation();
     const user = JSON.parse(localStorage.getItem("user") || "{}");
+    
+    // Check if user is admin or assigned to this task
+    const isAssigned = task.assignees?.some(assignee => 
+      (assignee._id || assignee.id) === user.id
+    );
+    
+    if (!userIsAdmin && !isAssigned) {
+      return; // User is not authorized to change status
+    }
     
     onUpdate({
       status: newStatus,
@@ -172,16 +197,21 @@ export default function TaskCard({ task, index, onUpdate, onDelete, onClick, onE
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  setShowStatusMenu(!showStatusMenu);
+                  if (canChangeStatus) {
+                    setShowStatusMenu(!showStatusMenu);
+                  }
                 }}
-                className={`px-2.5 py-1.5 rounded-lg text-xs border flex items-center gap-1.5 hover:opacity-80 transition font-medium ${getStatusColor(task.status)}`}
-                title="Change status"
+                className={`px-2.5 py-1.5 rounded-lg text-xs border flex items-center gap-1.5 transition font-medium ${getStatusColor(task.status)} ${
+                  canChangeStatus ? "hover:opacity-80 cursor-pointer" : "cursor-default opacity-70"
+                }`}
+                title={canChangeStatus ? "Change status" : "You cannot change this task's status"}
+                disabled={!canChangeStatus}
               >
                 {getStatusIcon(task.status)}
                 <span>{getStatusLabel(task.status)}</span>
               </button>
               
-              {showStatusMenu && (
+              {showStatusMenu && canChangeStatus && (
                 <div className="absolute bottom-full left-0 mb-2 w-40 bg-gray-900 border border-white/20 rounded-xl shadow-2xl z-50 overflow-hidden">
                   <button
                     onClick={(e) => handleStatusChange(e, "todo")}
@@ -240,26 +270,30 @@ export default function TaskCard({ task, index, onUpdate, onDelete, onClick, onE
           </div>
 
           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onEdit?.();
-              }}
-              className="p-2 hover:bg-white/10 rounded-lg transition-all hover:scale-110"
-              title="Edit task"
-            >
-              <Edit size={16} className="text-white/70" />
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowDeleteConfirm(true);
-              }}
-              className="p-2 hover:bg-red-500/20 rounded-lg transition-all hover:scale-110"
-              title="Delete task"
-            >
-              <Trash2 size={16} className="text-red-400" />
-            </button>
+            {userIsAdmin && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit?.();
+                }}
+                className="p-2 hover:bg-white/10 rounded-lg transition-all hover:scale-110"
+                title="Edit task"
+              >
+                <Edit size={16} className="text-white/70" />
+              </button>
+            )}
+            {userIsAdmin && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowDeleteConfirm(true);
+                }}
+                className="p-2 hover:bg-red-500/20 rounded-lg transition-all hover:scale-110"
+                title="Delete task"
+              >
+                <Trash2 size={16} className="text-red-400" />
+              </button>
+            )}
           </div>
         </div>
       </div>
