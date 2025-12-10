@@ -343,15 +343,55 @@ export default function ProjectListPage() {
   const [showAddProjectModal, setShowAddProjectModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [selectedProject, setSelectedProject] = useState(null);
+  const [allTasks, setAllTasks] = useState([]);
 
   useEffect(() => {
     let mounted = true;
     async function load() {
       try {
-        const res = await axios.get("/api/projects");
+        const [projectsRes, tasksRes] = await Promise.all([
+          axios.get("/api/projects"),
+          axios.get("/api/tasks")
+        ]);
+        
         if (!mounted) return;
-        const list = res.data.map(p => ({ ...p, id: p._id || p.id }));
-        setProjects(list);
+        
+        const tasks = tasksRes.data || [];
+        setAllTasks(tasks);
+        
+        // Calculate task counts and progress for each project
+        const projectsList = (projectsRes.data || []).map(p => {
+          const projectId = p._id || p.id;
+          const projectTasks = tasks.filter(t => 
+            (t.projectId?._id || t.projectId) === projectId
+          );
+          
+          const totalTasks = projectTasks.length;
+          const completedTasks = projectTasks.filter(t => t.status === "completed").length;
+          const progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+          
+          // Determine status
+          let status = "Not Started";
+          if (totalTasks > 0) {
+            if (completedTasks === totalTasks) {
+              status = "Completed";
+            } else if (completedTasks > 0) {
+              status = "Active";
+            } else {
+              status = "Active";
+            }
+          }
+          
+          return {
+            ...p,
+            id: projectId,
+            tasks: totalTasks,
+            progress,
+            status
+          };
+        });
+        
+        setProjects(projectsList);
       } catch (err) {
         console.error("Failed to load projects", err);
       }
@@ -363,7 +403,13 @@ export default function ProjectListPage() {
   const handleAddProject = async (data) => {
     try {
       const res = await axios.post("/api/projects", data);
-      const created = { ...res.data, id: res.data._id || res.data.id };
+      const created = { 
+        ...res.data, 
+        id: res.data._id || res.data.id,
+        tasks: 0,
+        progress: 0,
+        status: "Not Started"
+      };
       setProjects(prev => [...prev, created]);
       setShowAddProjectModal(false);
     } catch (err) {
@@ -405,35 +451,58 @@ export default function ProjectListPage() {
       />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {projects.map(p => (
-          <div key={p.id || p._id} className="group rounded-2xl p-5 bg-card border hover:shadow-lg transition relative">
-            <Link href={`/home/projects/${p.id || p._id}`} className="block">
-              <div className="flex justify-between items-start">
-                <h3 className="font-semibold text-lg">{p.name}</h3>
-                <div className="text-sm text-muted-foreground">{p.tasks} tasks</div>
-              </div>
+        {projects.map(p => {
+          const statusColor = {
+            Active: "text-green-400",
+            Completed: "text-blue-400",
+            "Not Started": "text-gray-400",
+            "On-hold": "text-yellow-400",
+          }[p.status] || "text-green-400";
+          
+          const colors = ["bg-blue-500", "bg-purple-500", "bg-green-500", "bg-pink-500", "bg-indigo-500", "bg-cyan-500"];
+          const colorClass = p.color || colors[Math.floor(Math.random() * colors.length)];
+          const label = (p.name || "P").charAt(0).toUpperCase();
 
-              <div className="mt-4">
-                <div className="h-2 rounded-full bg-white/5 overflow-hidden">
-                  <div style={{ width: `${p.progress}%`, background: p.color }} className="h-full rounded-full transition" />
+          return (
+            <div key={p.id || p._id} className="group bg-[var(--background)] p-5 rounded-xl border border-gray-700 hover:border-indigo-500/50 transition relative">
+              <Link href={`/home/projects/${p.id || p._id}`} className="block">
+                <div className="flex items-center justify-between mb-3">
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold ${colorClass}`}>
+                    {label}
+                  </div>
+                  <span className={`text-xs font-medium ${statusColor}`}>{p.status || "Active"}</span>
                 </div>
-                <div className="mt-2 text-xs text-muted-foreground">{p.progress}% complete</div>
-              </div>
-            </Link>
-            
-            <button
-              onClick={(e) => {
-                e.preventDefault();
-                setSelectedProject(p);
-                setShowDeleteConfirm(true);
-              }}
-              className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 p-2 hover:bg-red-500/20 rounded transition"
-              title="Delete project"
-            >
-              <Trash2 size={18} className="text-red-400" />
-            </button>
-          </div>
-        ))}
+
+                <h3 className="font-semibold text-base">{p.name}</h3>
+                <p className="text-gray-400 text-sm mt-1">{p.description || "No description"}</p>
+
+                <div className="flex items-center justify-between mt-4 text-gray-400 text-xs">
+                  <span>{p.tasks || 0} {p.tasks === 1 ? 'task' : 'tasks'}</span>
+                  <span>{p.progress || 0}% complete</span>
+                </div>
+
+                <div className="mt-3 h-2 rounded-full bg-gray-800 overflow-hidden">
+                  <div 
+                    style={{ width: `${p.progress || 0}%` }} 
+                    className={`h-full rounded-full transition-all ${colorClass}`}
+                  />
+                </div>
+              </Link>
+              
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  setSelectedProject(p);
+                  setShowDeleteConfirm(true);
+                }}
+                className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 p-2 hover:bg-red-500/20 rounded-lg transition"
+                title="Delete project"
+              >
+                <Trash2 size={16} className="text-red-400" />
+              </button>
+            </div>
+          );
+        })}
         </div>
 
         <AddProjectModal

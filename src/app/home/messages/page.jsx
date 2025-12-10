@@ -229,11 +229,20 @@ export default function ChatPage() {
 
       {/* Mobile Top Bar */}
       <div className="lg:hidden fixed top-0 left-0 w-full h-14 bg-[var(--background)] border-b border-white/10 z-30 flex items-center justify-between px-4">
-        <button onClick={() => setSidebarOpen(true)}>
-          <Menu size={24} />
+        <h2 className="font-semibold">Team Collaboration</h2>
+        <button 
+          onClick={() => setSidebarOpen(true)}
+          className="flex items-center gap-2 hover:bg-white/5 rounded-lg p-1.5 transition"
+        >
+          <Image
+            src={selectedMember.avatar}
+            width={32}
+            height={32}
+            className="rounded-full border border-white/20"
+            alt={selectedMember.name}
+          />
+          <span className="text-sm font-medium">{selectedMember.name}</span>
         </button>
-        <h2 className="font-semibold bg-[var(--background)]">Team Collaboration</h2>
-        <div></div>
       </div>
 
       {/* Sidebar Overlay (Mobile) */}
@@ -246,14 +255,14 @@ export default function ChatPage() {
 
       {/* Members Sidebar */}
       <aside
-        className={`fixed lg:static top-0 left-0 h-screen w-72 bg-[var(--background)] border-r border-white/10 p-4 flex flex-col transform transition-transform duration-300 z-30
-        ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
+        className={`fixed lg:static top-0 right-0 lg:left-0 h-screen w-72 bg-[var(--background)] border-l lg:border-l-0 lg:border-r border-white/10 p-4 flex flex-col transform transition-transform duration-300 z-30 shadow-2xl lg:shadow-none
+        ${sidebarOpen ? "translate-x-0" : "translate-x-full lg:translate-x-0"}
       `}
       >
         {/* Close button for mobile */}
         <button
           onClick={() => setSidebarOpen(false)}
-          className="absolute top-4 right-4 lg:hidden"
+          className="absolute top-4 left-4 lg:hidden p-2 hover:bg-white/10 rounded-lg transition"
         >
           <X size={22} />
         </button>
