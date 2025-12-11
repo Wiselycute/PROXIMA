@@ -261,7 +261,7 @@ export default function FilesPage() {
         {/* <Topbar /> */}
         <main className="p-8">
           <div className="flex items-center justify-between mb-6">
-            <h1 className="text-2xl font-semibold">Files</h1>
+            <h1 className="text-2xl text-[#3AB4F2] font-semibold">Files</h1>
             <div>
               <button onClick={() => setOpen(true)} className="px-4 py-2 rounded-xl bg-[var(--primary)] text-white inline-flex items-center gap-2">
                 <Upload size={16} /> Upload File

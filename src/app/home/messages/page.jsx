@@ -267,7 +267,7 @@ export default function ChatPage() {
           <X size={22} />
         </button>
 
-        <h2 className="text-xl font-semibold mb-3 mt-8 lg:mt-0">
+        <h2 className="text-xl text-[#3AB4F2] font-semibold mb-3 mt-8 lg:mt-0">
           Team Collaboration
         </h2>
 

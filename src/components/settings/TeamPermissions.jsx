@@ -66,7 +66,7 @@ export default function TeamPermissions() {
 
   return (
     <section className="max-w-5xl mx-auto">
-      <h2 className="text-2xl font-bold mb-4">Team & Permissions</h2>
+      <h2 className="text-2xl font-bold text-[#3AB4F2] p-2">Team & Permissions</h2>
 
       <div className="grid grid-cols-4 gap-6">
          <aside className="col-span-1 glass p-4">
@@ -99,6 +99,7 @@ export default function TeamPermissions() {
 
                 <div>
                   <RoleDropdown 
+                  className="bg-[var(--background)] text-white border border-white/10"
                     value={member.role} 
                     onChange={(role) => changeRole(member.id, role)} 
                     currentUserIsAdmin={currentUserIsAdmin}

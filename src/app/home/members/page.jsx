@@ -58,7 +58,7 @@ export default function MembersPage(){
         <main className="flex-1 p-8 overflow-auto bg-[var(--background)] transition-colors duration-300">
         <header className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-bold">Team Collaboration</h1>
+            <h1 className="text-2xl font-bold text-[#3AB4F2]">Team Collaboration</h1>
             <div className="text-sm opacity-60">Manage members, chat, and assign tasks</div>
           </div>
 

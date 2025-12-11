@@ -7,7 +7,7 @@ export default function Footer() {
     <footer className="relative  pt-20 pb-10 bg-[var(--background)] text-[var(--foreground)] overflow-hidden">
       
       {/* Neon accent line */}
-      <div className="absolute top-0 left-0 w-full h-[2px] bg-[var(--primary)] opacity-60 shadow-[0_0_18px_var(--primary)]"></div>
+      <div className="absolute top-0 left-0 w-full h-[2px] bg-[#3AB4F2]  opacity-60 shadow-[0_0_18px_#4BE2F2]"></div>
 
       <div className="max-w-7xl mx-auto px-6 md:px-12">
         

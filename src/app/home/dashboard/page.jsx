@@ -232,12 +232,12 @@ export default function DashboardPage() {
       {/* Header */}
       <div className="flex flex-col bg-[var(--background)] sticky top-0 z-10 sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-semibold text-white p-4">
+          <h1 className="text-xl sm:text-2xl font-semibold text-[#3AB4F2] p-4">
             Dashboard
           </h1>
           {/* {user && (
             <p className="text-sm text-gray-400 px-4">
-              Welcome back, <span className="font-semibold text-white">{user.name}</span>
+              Welcome , <span className="font-semibold text-white">{user.name}</span>
             </p>
           )} */}
         </div>
@@ -253,7 +253,7 @@ export default function DashboardPage() {
           </div>
 
           {userIsAdmin && (
-            <button onClick={() => setShowAddProjectModal(true)} className="bg-[#5A62EA] hover:bg-[#7077FF] transition px-4 py-2 rounded-lg flex items-center gap-2 text-white text-sm w-full sm:w-auto">
+            <button onClick={() => setShowAddProjectModal(true)} className="bg-primary hover:bg-[#7077FF] transition px-4 py-2 rounded-lg flex items-center gap-2 text-white text-sm w-full sm:w-auto">
               <Plus size={16} /> New Project
             </button>
           )}

@@ -16,7 +16,7 @@ export function ModeToggle() {
     <button
       onClick={() => setTheme(isDark ? "light" : "dark")}
       className={`relative w-10 h-5 rounded-full transition-colors duration-300 
-        ${isDark ? "bg-white/20 border border-gray-500" : "bg-gray-300 border border-gray-400"}`}
+        ${isDark ? "bg-[var(--background)] border border-gray-500" : "bg-gray-300 border border-gray-400"}`}
     >
       <span
         className={`absolute top-[2px] left-[2px] w-4 h-4 rounded-full shadow-md transform transition-transform duration-300

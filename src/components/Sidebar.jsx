@@ -81,7 +81,7 @@ export default function Sidebar() {
       >
         {/* Header / Logo */}
         <div className="flex items-center gap-3 pt-4 md:pt-0 px-2">
-          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#3AB4F2] to-[#2563EB] flex items-center justify-center shrink-0 shadow-lg shadow-blue-500/20">
+          <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center shrink-0 shadow-lg shadow-blue-500/20">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
               <path
                 d="M4 6h16v12H4z"
@@ -92,7 +92,7 @@ export default function Sidebar() {
               />
             </svg>
           </div>
-          <div className="font-bold text-xl text-white tracking-wide">Proxima</div>
+          <div className="font-bold text-xl text-[#3AB4F2] tracking-wide">Proxima</div>
         </div>
 
         {/* Navigation */}
@@ -119,7 +119,7 @@ export default function Sidebar() {
 
         {/* Footer Area */}
         <div className="mt-auto pt-4 border-t border-white/10 space-y-4">
-          <button className="w-full py-3 rounded-lg bg-gradient-to-r from-[#3AB4F2] to-[#2563EB] text-white font-semibold hover:opacity-90 transition-all shadow-lg shadow-blue-500/30 text-sm">
+          <button className="w-full py-3 rounded-lg bg-primary text-white font-semibold hover:opacity-90 transition-all shadow-lg shadow-primary/30 text-sm">
             + New Project
           </button>
 

@@ -36,7 +36,7 @@ export default function ProfileSettings() {
             {/* <Topbar    /> */}
     <section className="max-w-5xl mx-auto bg-[var(--background)] ">
       {/* ----------- PAGE TITLE ----------- */}
-      <h2 className="text-2xl font-bold mb-4">Profile Settings</h2>
+      <h2 className="text-2xl text-[#3AB4F2] font-bold p-4">Profile Settings</h2>
 
       {/* ----------- GRID ----------- */}
       <div className="grid grid-cols-4 gap-6">

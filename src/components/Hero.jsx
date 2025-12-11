@@ -1,7 +1,8 @@
 "use client";
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { Mail, Phone, Calendar, Clock } from "lucide-react";
+import { Mail, Phone, Calendar, Clock,  } from "lucide-react";
+import Link from "next/link";
 
 export default function Hero() {
     return (
@@ -32,8 +33,8 @@ export default function Hero() {
           </p>
 
           <div className="flex flex-wrap gap-4 mt-4">
-            <a
-              href="#get-started"
+            <Link
+              href="/auth/signup"
               className="inline-flex items-center px-6 py-3 rounded-full font-semibold shadow-lg"
               style={{
                 background: "var(--primary)",
@@ -41,7 +42,7 @@ export default function Hero() {
               }}
             >
              GET STARTED
-            </a>
+            </Link>
 
             <a
               href="#demo"

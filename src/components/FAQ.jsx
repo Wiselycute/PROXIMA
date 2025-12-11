@@ -9,10 +9,10 @@ import {
 
 export default function FAQ() {
   return (
-    <section className="py-24 relative bg-[var(--background)] text-[var(--foreground)] overflow-hidden">
+    <section className="py-8 relative bg-[var(--background)] text-[var(--foreground)] overflow-hidden">
       
       {/* glowing neon top highlight */}
-      <div className="absolute top-0 left-0 w-full h-[2px] bg-[#4BE2F2] opacity-60 shadow-[0_0_18px_#4BE2F2]"></div>
+      {/* <div className="absolute top-0 left-0 w-full h-[2px]  opacity-60 shadow-[0_0_18px_#4BE2F2]"></div> */}
 
       <div className="max-w-4xl mx-auto px-6 md:px-12 text-center">
         

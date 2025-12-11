@@ -1,4 +1,7 @@
+import Link  from 'next/link';
+
 export default function CTA() {
+
   return (
     <section className="relative w-full py-8 bg-[var(--background)] transition-colors duration-300">
 
@@ -17,14 +20,15 @@ export default function CTA() {
           Join thousands of teams using Proxima to build clarity, focus, and flow.
         </p>
 
-        <button
+        <Link
+          href="/auth/signup"
           className="px-14 py-5 rounded-full text-xl font-semibold 
                      bg-[#4BE2F2] text-black 
                      shadow-[0_0_30px_#4BE2F2] hover:shadow-[0_0_50px_#4BE2F2]
                      hover:scale-105 transition duration-300"
         >
-          Start Your Free Trial
-        </button>
+          Get Started
+        </Link>
       </div>
     </section>
   );

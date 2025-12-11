@@ -33,7 +33,7 @@ export default function AccountManagementPage() {
               <div className="flex-1 bg-[var(--background)]">
                 {/* <Topbar   /> */}
     <section className="max-w-5xl mx-auto">
-      <h2 className="text-2xl font-bold mb-4">Account Management</h2>
+      <h2 className="text-2xl font-bold text-[#3AB4F2] p-4">Account Management</h2>
 
       <div className="grid grid-cols-4 gap-6">
 

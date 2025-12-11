@@ -18,7 +18,7 @@ export default function PreferencesPage() {
           <div className="flex-1 bg-[var(--background)]">
             {/* <Topbar   /> */}
     <section className="max-w-5xl mx-auto bg-[var(--background)] ">
-      <h2 className="text-2xl font-bold mb-4">Preferences</h2>
+      <h2 className="text-2xl font-bold text-[#3AB4F2] p-4">Preferences</h2>
 
       <div className="grid grid-cols-4 gap-6">
 
