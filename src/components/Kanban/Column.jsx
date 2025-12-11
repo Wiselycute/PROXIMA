@@ -81,7 +81,7 @@ export default function Column({ column, tasks = [], onAddTask, onUpdateTask, on
       </div>
 
       {/* Tasks Container */}
-      <div className="space-y-3 mb-4 max-h-[calc(100vh-400px)] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+      <div className="space-y-3 mb-4 max-h-[calc(100vh-400px)] overflow-y-auto w-[300px] pr-2 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
         {tasks.length === 0 && (
           <div className="text-center py-12 px-4 rounded-xl bg-white/5 border border-dashed border-white/10">
             <div className="text-white/40 text-sm mb-2">No tasks yet</div>
