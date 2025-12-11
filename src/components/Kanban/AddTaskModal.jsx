@@ -115,7 +115,7 @@ export default function AddTaskModal({
           <div>
             <label className="text-sm text-white/60">Column</label>
             <select
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 mt-1"
+              className="w-full bg-[var(--background)] border border-white/10 rounded-xl px-3 py-2 mt-1"
               value={columnId}
               onChange={(e) => setColumnId(e.target.value)}
             >
