@@ -167,7 +167,7 @@ export default function TaskDetailsDrawer({ open, onClose, task, comments: initi
 
             {task?.dueDate && (
               <div className="flex items-center gap-3">
-                <Clock size={16} className="text-white/50" />
+                <Clock size={16} className="text-white" />
                 <span className="text-sm text-white/70">
                   Due: {new Date(task.dueDate).toLocaleDateString()}
                 </span>

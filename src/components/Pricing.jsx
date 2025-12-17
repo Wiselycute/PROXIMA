@@ -18,7 +18,7 @@ const plans = [
   },
   {
     name: "Pro",
-    price: "$12/mo",
+    price: "FCFA6600/mo",
     description: "For small teams who want better workflow clarity.",
     features: [
       "Up to 10 team boards",
@@ -32,7 +32,7 @@ const plans = [
   },
   {
     name: "Enterprise",
-    price: "$39/mo",
+    price: "FCFA21450/mo",
     description: "For growing organizations that need power & control.",
     features: [
       "Unlimited team boards",
